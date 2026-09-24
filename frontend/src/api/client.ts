@@ -17,7 +17,8 @@ import {
   AdminProvider
 } from '../types';
 
-const API_HOST = import.meta.env.VITE_API_URL ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '') : '';
+const metaEnv = (import.meta as any)?.env;
+const API_HOST = metaEnv?.VITE_API_URL ? String(metaEnv.VITE_API_URL).replace(/\/$/, '') : '';
 const BASE_URL = `${API_HOST}/api`;
 
 function getHeaders(): HeadersInit {
