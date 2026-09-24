@@ -33,6 +33,7 @@ function getHeaders(): HeadersInit {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
+  const contentType = res.headers.get('content-type') || '';
   if (!res.ok) {
     let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
     try {
@@ -41,13 +42,23 @@ async function handleResponse<T>(res: Response): Promise<T> {
         const errJson = JSON.parse(errText);
         errorMsg = errJson.message || errJson.error || errText;
       } catch {
-        if (errText) errorMsg = errText;
+        if (errText && !errText.includes('<!DOCTYPE') && !errText.includes('<html')) {
+          errorMsg = errText;
+        }
       }
     } catch {
       // ignore
     }
     throw new Error(errorMsg);
   }
+
+  if (contentType && !contentType.includes('application/json')) {
+    const text = await res.text();
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error("Cannot reach Backend API. Please check if VITE_API_URL is configured in Vercel and your backend is live.");
+    }
+  }
+
   return res.json();
 }
 
