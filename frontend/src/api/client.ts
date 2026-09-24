@@ -18,7 +18,12 @@ import {
 } from '../types';
 
 const metaEnv = (import.meta as any)?.env;
-const API_HOST = metaEnv?.VITE_API_URL ? String(metaEnv.VITE_API_URL).replace(/\/$/, '') : '';
+const DEFAULT_API_URL = 'https://keystone-backend-1usl.onrender.com';
+const API_HOST = (
+  metaEnv?.VITE_API_URL
+    ? String(metaEnv.VITE_API_URL)
+    : (typeof window !== 'undefined' && !window.location.hostname.includes('localhost') ? DEFAULT_API_URL : '')
+).replace(/\/$/, '');
 const BASE_URL = `${API_HOST}/api`;
 
 function getHeaders(): HeadersInit {
