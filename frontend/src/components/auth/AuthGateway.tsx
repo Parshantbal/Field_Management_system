@@ -89,10 +89,10 @@ export const AuthGateway: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans transition-colors duration-200">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 flex flex-col justify-center items-center p-2.5 sm:p-6 lg:p-8 relative overflow-hidden font-sans transition-colors duration-200">
       {/* Top right theme toggle */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-40">
-        <ThemeToggle showLabel />
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 z-40">
+        <ThemeToggle showLabel={false} />
       </div>
 
       {/* Ambient background soft glow orbs */}
@@ -100,7 +100,7 @@ export const AuthGateway: React.FC = () => {
       <div className="absolute bottom-1/4 right-1/4 w-[480px] h-[480px] bg-indigo-500/10 dark:bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Main Container: 50-50 Split Square Box */}
-      <div className="relative w-full max-w-5xl rounded-[2.5rem] bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-2xl p-2.5 sm:p-3 z-10 overflow-hidden transition-colors duration-200">
+      <div className="relative w-full max-w-5xl rounded-2xl sm:rounded-[2.5rem] bg-white dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-2xl p-2 sm:p-3 z-10 overflow-hidden transition-colors duration-200">
         
         {/* ========================================================================= */}
         {/* ANIMATED SLIDING BACKGROUND COLOR PANEL                                  */}
@@ -159,10 +159,10 @@ export const AuthGateway: React.FC = () => {
                 setError(null);
               }
             }}
-            className={`auth-panel p-6 sm:p-8 lg:p-9 flex flex-col justify-between rounded-[2rem] transition-all duration-500 select-none ${
+            className={`auth-panel p-4 sm:p-8 lg:p-9 flex-col justify-between rounded-2xl sm:rounded-[2rem] transition-all duration-500 select-none ${
               isSignIn
-                ? 'auth-panel-active opacity-100'
-                : 'auth-panel-inactive opacity-60 hover:opacity-90 cursor-pointer bg-slate-50/50 dark:bg-slate-950/20 md:bg-transparent'
+                ? 'flex auth-panel-active opacity-100'
+                : 'hidden md:flex auth-panel-inactive opacity-60 hover:opacity-90 cursor-pointer bg-slate-50/50 dark:bg-slate-950/20 md:bg-transparent'
             }`}
           >
             <div>
@@ -400,10 +400,10 @@ export const AuthGateway: React.FC = () => {
                 setError(null);
               }
             }}
-            className={`auth-panel p-6 sm:p-8 lg:p-9 flex flex-col justify-between rounded-[2rem] transition-all duration-500 select-none ${
+            className={`auth-panel p-4 sm:p-8 lg:p-9 flex-col justify-between rounded-2xl sm:rounded-[2rem] transition-all duration-500 select-none ${
               !isSignIn
-                ? 'auth-panel-active opacity-100'
-                : 'auth-panel-inactive opacity-60 hover:opacity-90 cursor-pointer bg-slate-50/50 dark:bg-slate-950/20 md:bg-transparent'
+                ? 'flex auth-panel-active opacity-100'
+                : 'hidden md:flex auth-panel-inactive opacity-60 hover:opacity-90 cursor-pointer bg-slate-50/50 dark:bg-slate-950/20 md:bg-transparent'
             }`}
           >
             <div>

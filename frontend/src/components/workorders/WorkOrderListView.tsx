@@ -123,8 +123,62 @@ export const WorkOrderListView: React.FC<WorkOrderListViewProps> = ({
 
       </div>
 
-      {/* Work Orders Table */}
-      <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+      {/* Mobile Work Orders Card List (< md) */}
+      <div className="md:hidden space-y-3">
+        {filteredOrders.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 bg-slate-900/60 rounded-2xl border border-slate-800">
+            No work orders found matching the filter criteria.
+          </div>
+        ) : (
+          filteredOrders.map((wo) => (
+            <div
+              key={wo.id}
+              onClick={() => onSelectWorkOrder(wo.id)}
+              className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer space-y-3 shadow-xs"
+            >
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-mono text-xs font-bold text-brand-400">
+                  {wo.workOrderNumber}
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <PriorityBadge priority={wo.priority} />
+                  <StatusBadge status={wo.status} />
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-white line-clamp-1">{wo.title}</h4>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                  <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span className="truncate">{wo.facilityName}</span>
+                  {wo.assetName && (
+                    <>
+                      <span>•</span>
+                      <span className="truncate">{wo.assetName}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="truncate max-w-[120px]">{wo.technicianName || 'Unassigned'}</span>
+                </div>
+                <SlaCountdown
+                  dueTime={wo.resolutionSlaDue}
+                  resolvedAt={wo.resolvedAt}
+                  riskLevel={wo.slaRiskLevel}
+                  compact
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Work Orders Table (hidden on mobile, visible md and up) */}
+      <div className="hidden md:block bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

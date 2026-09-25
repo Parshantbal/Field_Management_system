@@ -26,7 +26,9 @@ import {
   Sparkles,
   Plus,
   Copy,
-  Check
+  Check,
+  Menu,
+  X
 } from 'lucide-react';
 
 import { ExecutiveDashboard } from '../dashboard/ExecutiveDashboard';
@@ -59,6 +61,7 @@ export const AdminPortalLayout: React.FC = () => {
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Core datasets
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -159,16 +162,26 @@ export const AdminPortalLayout: React.FC = () => {
       <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
         <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30">
+            {/* Logo & Mobile Menu Button */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile Hamburger Drawer Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+                aria-label="Toggle navigation drawer"
+              >
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30 shrink-0">
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold tracking-tight text-white">KEYSTONE</span>
-                  <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Operations Admin
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-xl font-bold tracking-tight text-white">KEYSTONE</span>
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                    Admin
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 hidden sm:block">Central Control & Field Oversight Console</p>
@@ -176,7 +189,7 @@ export const AdminPortalLayout: React.FC = () => {
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               {/* Theme Toggle (Dark / Light) */}
               <ThemeToggle />
 
@@ -184,7 +197,7 @@ export const AdminPortalLayout: React.FC = () => {
               <button
                 onClick={loadAllData}
                 disabled={isRefreshing}
-                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 transition-all"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 transition-all"
                 title="Refresh datasets"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-brand-400' : ''}`} />
@@ -195,11 +208,11 @@ export const AdminPortalLayout: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsPersonaMenuOpen(!isPersonaMenuOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium max-w-[120px] sm:max-w-none"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-slate-300 font-semibold">{user?.fullName || 'Staff User'}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="text-slate-300 font-semibold truncate hidden sm:inline">{user?.fullName || 'Staff User'}</span>
+                    <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                   </button>
 
                   {isPersonaMenuOpen && (
@@ -224,9 +237,9 @@ export const AdminPortalLayout: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-slate-200 font-semibold">{user?.fullName || 'Admin'}</span>
+                <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-medium max-w-[110px] sm:max-w-none">
+                  <ShieldCheck className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                  <span className="text-slate-200 font-semibold truncate">{user?.fullName || 'Admin'}</span>
                 </div>
               )}
 
@@ -240,7 +253,7 @@ export const AdminPortalLayout: React.FC = () => {
                     setTimeout(() => setCopiedAdminId(false), 2000);
                   }}
                   title="Click to copy your Admin ID to share with customers"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-mono transition-all"
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-mono transition-all"
                 >
                   <Building2 className="w-3.5 h-3.5 text-purple-400" />
                   <span>Admin ID: <strong>#{user.id}</strong></span>
@@ -251,20 +264,124 @@ export const AdminPortalLayout: React.FC = () => {
               {/* Sign Out */}
               <button
                 onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-medium transition-all"
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-medium transition-all"
+                title="Logout"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Logout</span>
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Mobile Navigation Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Container */}
+          <div className="relative w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-sm text-slate-900 dark:text-white">KEYSTONE</span>
+                  <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">Admin Modules</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Nav Items */}
+            <div className="p-3 space-y-1 overflow-y-auto flex-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                      isActive
+                        ? 'admin-nav-active bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-bold shadow-md shadow-brand-600/20'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                      <span>{item.label}</span>
+                    </div>
+
+                    {item.badge && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          isActive
+                            ? 'bg-white/20 text-white border-white/30'
+                            : item.badgeColor || 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Drawer Footer Actions */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              {user?.id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(String(user.id));
+                    setCopiedAdminId(true);
+                    setTimeout(() => setCopiedAdminId(false), 2000);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-700 dark:text-purple-300 text-xs font-mono transition-all"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                  <span>Admin ID: <strong>#{user.id}</strong></span>
+                  {copiedAdminId ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-purple-400/70" />}
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCreateModalOpen(true);
+                }}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Work Order</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content with Left Sidebar */}
       <div className="flex-1 flex max-w-[1700px] w-full mx-auto">
-        {/* Left Sidebar */}
-        <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-[calc(100vh-4rem)]">
+        {/* Desktop Left Sidebar (hidden on mobile) */}
+        <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800 shrink-0 min-h-[calc(100vh-4rem)]">
           <div className="p-4 space-y-1.5 flex-1">
             <div className="px-3 py-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Admin Modules

@@ -87,12 +87,12 @@ export const TechnicianPortalLayout: React.FC = () => {
                     Technician Field Portal
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Mobile Dispatch & On-Site Execution</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Mobile Dispatch & On-Site Execution</p>
               </div>
             </div>
 
             {/* Right Technician Bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               {/* Theme Toggle (Dark / Light) */}
               <ThemeToggle />
 
@@ -100,7 +100,7 @@ export const TechnicianPortalLayout: React.FC = () => {
               <button
                 onClick={loadData}
                 disabled={isRefreshing}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
                 title="Refresh jobs"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-amber-600 dark:text-amber-400' : ''}`} />
@@ -111,7 +111,7 @@ export const TechnicianPortalLayout: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer"
                   title="Notifications"
                 >
                   <Bell className="w-4 h-4" />
@@ -123,7 +123,7 @@ export const TechnicianPortalLayout: React.FC = () => {
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-4 z-50 animate-in fade-in">
+                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-4 z-50 animate-in fade-in">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
                       <div className="flex items-center gap-2">
                         <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />

@@ -78,27 +78,27 @@ export const Navbar: React.FC<NavbarProps> = ({ onRefresh, isRefreshing = false 
             <div className="relative">
               <button
                 onClick={() => setIsPersonaMenuOpen(!isPersonaMenuOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 transition-all text-sm font-medium"
+                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700 hover:border-slate-600 transition-all text-sm font-medium"
                 title="Switch active user persona"
               >
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="text-xs text-slate-400 hidden md:inline">Persona:</span>
-                  <span className="text-xs font-semibold text-slate-200">
+                  <span className="text-xs font-semibold text-slate-200 truncate max-w-[80px] sm:max-w-none">
                     {user?.fullName || 'Select User'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 pl-1 border-l border-slate-700">
+                <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0">
                   {getRoleIcon()}
                   <span className="text-xs text-slate-300 hidden sm:inline">{getRoleTitle()}</span>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </button>
 
               {/* Persona Dropdown Menu */}
               {isPersonaMenuOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-80 rounded-xl bg-slate-900 border border-slate-700/80 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                   onClick={() => setIsPersonaMenuOpen(false)}
                 >
                   <div className="px-3 py-2 border-b border-slate-800 mb-1">
