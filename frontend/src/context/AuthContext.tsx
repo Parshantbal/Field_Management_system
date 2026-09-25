@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AuthResponse, RegisterRequest, Role, User } from '../types';
 import { api } from '../api/client';
 
@@ -24,50 +24,141 @@ export const DEMO_USERS = [
   { email: 'client.apex@keystone.io', label: 'Customer (David Miller)', role: 'ROLE_CUSTOMER' as Role, desc: 'Apex Tower facility client portal' },
 ];
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [authData, setAuthData] = useState<AuthResponse | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+// Helper to decode JWT payload safely in the browser
+function decodeJwt(token: string): any | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
 
-  const initAuth = async () => {
-    setIsLoading(true);
+// Read user synchronously from localStorage on initial render for 0ms instant loading
+function getInitialUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const token = localStorage.getItem('keystone_token');
+    if (!token) {
+      localStorage.removeItem('keystone_user');
+      return null;
+    }
+
+    // Check JWT expiry
+    const payload = decodeJwt(token);
+    if (payload && payload.exp && Date.now() >= payload.exp * 1000) {
+      localStorage.removeItem('keystone_token');
+      localStorage.removeItem('keystone_user');
+      return null;
+    }
+
+    // Check cached user profile
+    const cachedUserJson = localStorage.getItem('keystone_user');
+    if (cachedUserJson) {
+      const parsed = JSON.parse(cachedUserJson);
+      if (parsed && parsed.email) {
+        return parsed;
+      }
+    }
+
+    // Fallback: derive user profile directly from JWT payload claims
+    if (payload) {
+      const fullName = payload.name || payload.sub || 'User';
+      const [firstName = '', ...rest] = fullName.split(' ');
+      const fallbackUser: User = {
+        id: Number(payload.userId) || 1,
+        email: payload.sub || '',
+        firstName,
+        lastName: rest.join(' '),
+        fullName,
+        role: (payload.role as Role) || 'ROLE_ADMIN',
+      };
+      localStorage.setItem('keystone_user', JSON.stringify(fallbackUser));
+      return fallbackUser;
+    }
+  } catch (err) {
+    console.warn('Error reading initial auth state:', err);
+  }
+  return null;
+}
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(getInitialUser);
+  const [authData, setAuthData] = useState<AuthResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Background verification, warm-up, and keep-alive
+  useEffect(() => {
+    // 1. Silent warm-up ping to wake up sleeping Render backend if needed
+    fetch('https://keystone-backend-1usl.onrender.com/api/health', { mode: 'cors' }).catch(() => {});
+
+    // 2. Periodic keep-alive ping every 10 minutes to prevent Render free-tier from idling while user has tab open
+    const keepAliveTimer = setInterval(() => {
+      fetch('https://keystone-backend-1usl.onrender.com/api/health', { mode: 'cors' }).catch(() => {});
+    }, 10 * 60 * 1000);
+
+    // 3. Check for demo query parameter
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const demoParam = urlParams.get('demo');
       if (demoParam) {
-        try {
-          const demoEmail = demoParam.includes('@') ? demoParam : `${demoParam}@keystone.io`;
-          const res = await api.auth.login(demoEmail, 'password123');
-          setAuthData(res);
-          const u = await api.auth.getMe();
-          setUser(u);
-          setIsLoading(false);
-          return;
-        } catch (err) {
-          console.warn('Demo auto-login failed:', err);
-        }
+        const demoEmail = demoParam.includes('@') ? demoParam : `${demoParam}@keystone.io`;
+        api.auth.login(demoEmail, 'password123')
+          .then(async (res) => {
+            setAuthData(res);
+            const u = await api.auth.getMe().catch(() => ({
+              id: res.userId,
+              email: res.email,
+              firstName: res.name.split(' ')[0] || '',
+              lastName: res.name.split(' ').slice(1).join(' '),
+              fullName: res.name,
+              role: res.role,
+            }));
+            setUser(u);
+            localStorage.setItem('keystone_user', JSON.stringify(u));
+          })
+          .catch((err) => console.warn('Demo auto-login failed:', err));
+        return () => clearInterval(keepAliveTimer);
       }
     }
+
+    // 4. Silent non-blocking session validation if user has a token
     const token = localStorage.getItem('keystone_token');
     if (token) {
-      try {
-        const u = await api.auth.getMe();
-        setUser(u);
-      } catch (err) {
-        console.warn('Existing token invalid or expired, clearing session:', err);
-        localStorage.removeItem('keystone_token');
-        setUser(null);
-        setAuthData(null);
-      }
-    } else {
-      setUser(null);
-      setAuthData(null);
+      api.auth.getMe()
+        .then((freshUser) => {
+          setUser(freshUser);
+          localStorage.setItem('keystone_user', JSON.stringify(freshUser));
+        })
+        .catch((err) => {
+          // Only clear session if token was rejected as explicitly unauthorized (401/403)
+          const isUnauthorized =
+            err?.message?.includes('401') ||
+            err?.message?.includes('403') ||
+            err?.message?.includes('Unauthorized');
+          if (isUnauthorized) {
+            console.warn('Session expired on server, clearing session:', err);
+            localStorage.removeItem('keystone_token');
+            localStorage.removeItem('keystone_user');
+            setUser(null);
+            setAuthData(null);
+          } else {
+            // Cold start or temporary network glitch: do NOT log out the user
+            console.info('Backend wake-up in progress; retaining cached session');
+          }
+        });
     }
-    setIsLoading(false);
-  };
 
-  useEffect(() => {
-    initAuth();
+    return () => clearInterval(keepAliveTimer);
   }, []);
 
   const login = async (email: string, pass: string) => {
@@ -75,8 +166,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.auth.login(email, pass);
       setAuthData(res);
-      const u = await api.auth.getMe();
+      let u: User;
+      try {
+        u = await api.auth.getMe();
+      } catch {
+        const [firstName = '', ...rest] = (res.name || '').split(' ');
+        u = {
+          id: res.userId,
+          email: res.email,
+          firstName,
+          lastName: rest.join(' '),
+          fullName: res.name || res.email,
+          role: res.role,
+        };
+      }
       setUser(u);
+      localStorage.setItem('keystone_user', JSON.stringify(u));
     } finally {
       setIsLoading(false);
     }
@@ -87,8 +192,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.auth.register(req);
       setAuthData(res);
-      const u = await api.auth.getMe();
+      let u: User;
+      try {
+        u = await api.auth.getMe();
+      } catch {
+        u = {
+          id: res.userId,
+          email: res.email,
+          firstName: req.firstName,
+          lastName: req.lastName,
+          fullName: `${req.firstName} ${req.lastName}`.trim(),
+          role: res.role || req.role || 'ROLE_CUSTOMER',
+        };
+      }
       setUser(u);
+      localStorage.setItem('keystone_user', JSON.stringify(u));
     } finally {
       setIsLoading(false);
     }
@@ -99,23 +217,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.auth.quickSwitch(email);
       setAuthData(res);
-      const u = await api.auth.getMe();
+      let u: User;
+      try {
+        u = await api.auth.getMe();
+      } catch {
+        const [firstName = '', ...rest] = (res.name || '').split(' ');
+        u = {
+          id: res.userId,
+          email: res.email,
+          firstName,
+          lastName: rest.join(' '),
+          fullName: res.name || res.email,
+          role: res.role,
+        };
+      }
       setUser(u);
+      localStorage.setItem('keystone_user', JSON.stringify(u));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     api.auth.logout();
+    localStorage.removeItem('keystone_token');
+    localStorage.removeItem('keystone_user');
     setUser(null);
     setAuthData(null);
-  };
+  }, []);
 
   const refreshUser = async () => {
     try {
       const u = await api.auth.getMe();
       setUser(u);
+      localStorage.setItem('keystone_user', JSON.stringify(u));
     } catch (e) {
       console.error(e);
     }

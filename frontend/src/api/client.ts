@@ -108,6 +108,7 @@ export const api = {
     },
     logout: () => {
       localStorage.removeItem('keystone_token');
+      localStorage.removeItem('keystone_user');
     }
   },
 
