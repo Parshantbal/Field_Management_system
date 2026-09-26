@@ -239,6 +239,8 @@ public class WorkOrderDTO {
 
         private Instant createdAt;
         private Instant updatedAt;
+        private String dispatchStatus;
+        private String dispatchRejectionReason;
 
         public WorkOrderResponseDTO() {}
 
@@ -292,6 +294,8 @@ public class WorkOrderDTO {
             public WorkOrderResponseDTOBuilder auditLogs(List<AuditLogDTO> logs) { dto.auditLogs = logs; return this; }
             public WorkOrderResponseDTOBuilder createdAt(Instant c) { dto.createdAt = c; return this; }
             public WorkOrderResponseDTOBuilder updatedAt(Instant u) { dto.updatedAt = u; return this; }
+            public WorkOrderResponseDTOBuilder dispatchStatus(String ds) { dto.dispatchStatus = ds; return this; }
+            public WorkOrderResponseDTOBuilder dispatchRejectionReason(String dr) { dto.dispatchRejectionReason = dr; return this; }
             public WorkOrderResponseDTO build() { return dto; }
         }
 
@@ -386,6 +390,20 @@ public class WorkOrderDTO {
         public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
         public Instant getUpdatedAt() { return updatedAt; }
         public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+        public String getDispatchStatus() { return dispatchStatus; }
+        public void setDispatchStatus(String dispatchStatus) { this.dispatchStatus = dispatchStatus; }
+        public String getDispatchRejectionReason() { return dispatchRejectionReason; }
+        public void setDispatchRejectionReason(String dispatchRejectionReason) { this.dispatchRejectionReason = dispatchRejectionReason; }
+    }
+
+    public static class RejectJobRequest {
+        private String reason;
+
+        public RejectJobRequest() {}
+        public RejectJobRequest(String reason) { this.reason = reason; }
+
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
     }
 
     public static class WorkOrderPartDTO {

@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   Send,
   Star,
-  Plus
+  Plus,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 
 interface WorkOrderDetailModalProps {
@@ -314,34 +316,61 @@ export const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
                     </div>
                   )}
 
-                  {/* Quick Direct Assign/Switch for Admin */}
-                  {(role === 'ROLE_ADMIN' || role === 'ROLE_DISPATCHER') && technicians.length > 0 && (
-                    <div className="pt-2.5 border-t border-slate-700/60 mt-2 space-y-1.5">
-                      <label className="text-[11px] font-semibold text-slate-400 block">
-                        Quick Assign / Change Fleet Crew:
-                      </label>
-                      <select
-                        value={workOrder.technicianId || ''}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          if (val) handleQuickAssignTechnician(val);
-                        }}
-                        disabled={isAssigningTech}
-                        className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 font-medium disabled:opacity-50"
-                      >
-                        <option value="" disabled>-- Select Fleet Technician --</option>
-                        {technicians.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} — {t.specialization} ({t.status.replace('_', ' ')})
-                          </option>
-                        ))}
-                      </select>
-                      {isAssigningTech && (
-                        <p className="text-[10px] text-brand-400 animate-pulse font-mono">
-                          Assigning crew to work order...
-                        </p>
-                      )}
+                  {/* Dispatch Status Alert for Admin/Technician */}
+                  {workOrder.dispatchStatus === 'PENDING_ACCEPTANCE' && (
+                    <div className="mt-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                      <span>Dispatch request sent to <strong>{workOrder.technicianName}</strong>. Awaiting technician acceptance.</span>
                     </div>
+                  )}
+
+                  {workOrder.dispatchStatus === 'REJECTED' && (
+                    <div className="mt-2.5 p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <div>
+                        <strong className="text-rose-200">Assignment Declined:</strong> {workOrder.dispatchRejectionReason || 'Technician busy / unable to accept'}. Please assign another technician below.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Direct Assign/Switch for Admin */}
+                  {workOrder.dispatchStatus === 'ACCEPTED' ? (
+                    <div className="pt-2.5 border-t border-slate-700/60 mt-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-xs text-emerald-300">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div>
+                        <span className="font-bold block">Technician Confirmed (Assignment Locked)</span>
+                        <span className="text-[11px] text-slate-300">Technician has accepted this job. Reassignment is locked for this customer complaint.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    (role === 'ROLE_ADMIN' || role === 'ROLE_DISPATCHER') && technicians.length > 0 && (
+                      <div className="pt-2.5 border-t border-slate-700/60 mt-2 space-y-1.5">
+                        <label className="text-[11px] font-semibold text-slate-400 block">
+                          {workOrder.dispatchStatus === 'REJECTED' ? 'Reassign Another Fleet Crew (Previous Rejected):' : 'Dispatch / Assign Fleet Crew:'}
+                        </label>
+                        <select
+                          value={workOrder.technicianId || ''}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (val) handleQuickAssignTechnician(val);
+                          }}
+                          disabled={isAssigningTech}
+                          className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 font-medium disabled:opacity-50"
+                        >
+                          <option value="" disabled>-- Select Fleet Technician --</option>
+                          {technicians.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} — {t.specialization} ({t.status.replace('_', ' ')})
+                            </option>
+                          ))}
+                        </select>
+                        {isAssigningTech && (
+                          <p className="text-[10px] text-brand-400 animate-pulse font-mono">
+                            Sending assignment request to crew...
+                          </p>
+                        )}
+                      </div>
+                    )
                   )}
                 </div>
 

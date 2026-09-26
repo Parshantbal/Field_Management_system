@@ -183,6 +183,11 @@ public class WorkOrderService {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("Work order not found: " + workOrderId));
 
+        // Enforce assignment lock: once technician has accepted, admin cannot reassign to another technician
+        if ("ACCEPTED".equalsIgnoreCase(workOrder.getDispatchStatus()) && workOrder.getAssignedTechnician() != null) {
+            throw new IllegalStateException("Technician " + workOrder.getAssignedTechnician().getName() + " has already accepted this assignment. Assignment is locked.");
+        }
+
         Technician technician = technicianRepository.findById(request.getTechnicianId())
                 .orElseThrow(() -> new IllegalArgumentException("Technician not found: " + request.getTechnicianId()));
 
@@ -194,12 +199,12 @@ public class WorkOrderService {
         }
 
         workOrder.setAssignedTechnician(technician);
-        technician.setActiveJobsCount(technician.getActiveJobsCount() + 1);
-        technician.setStatus("ON_JOB");
+        workOrder.setDispatchStatus("PENDING_ACCEPTANCE");
+        workOrder.setDispatchRejectionReason(null);
         if (technician.getAdminId() == null && workOrder.getAdminId() != null) {
             technician.setAdminId(workOrder.getAdminId());
+            technicianRepository.save(technician);
         }
-        technicianRepository.save(technician);
 
         if (request.getScheduledStart() != null) workOrder.setScheduledStart(request.getScheduledStart());
         if (request.getScheduledEnd() != null) workOrder.setScheduledEnd(request.getScheduledEnd());
@@ -215,36 +220,137 @@ public class WorkOrderService {
         AuditLog log = AuditLog.builder()
                 .workOrder(updated)
                 .performedBy(currentUser)
-                .action("ASSIGNED")
+                .action("ASSIGNED_REQUESTED")
                 .fromStatus(oldStatus)
                 .toStatus(WorkOrderStatus.ASSIGNED)
-                .notes("Assigned to " + technician.getName() + (request.getNotes() != null ? ": " + request.getNotes() : ""))
+                .notes("Dispatch request sent to " + technician.getName() + " (Pending Acceptance)" + (request.getNotes() != null ? ": " + request.getNotes() : ""))
                 .build();
         auditLogRepository.save(log);
 
-        // Notify assigned technician
+        // Notify assigned technician to review and accept/decline
         if (technician.getUser() != null) {
             try {
                 com.keystone.dto.NotificationDTO.SendNotificationRequest techNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
                 techNotif.setRecipientId(technician.getUser().getId());
-                techNotif.setTitle("New Job Assigned");
-                techNotif.setMessage("You have been assigned to Work Order " + updated.getWorkOrderNumber() + ": " + updated.getTitle());
+                techNotif.setTitle("New Job Request");
+                techNotif.setMessage("You have received an assignment request for Work Order " + updated.getWorkOrderNumber() + ": " + updated.getTitle() + ". Please review and accept or decline.");
                 techNotif.setType("DISPATCH");
                 techNotif.setReferenceId(updated.getId());
                 notificationService.sendNotification(techNotif);
             } catch (Exception ignored) {}
         }
 
-        // Notify customer
+        return mapToDTO(updated);
+    }
+
+    @Transactional
+    public WorkOrderDTO.WorkOrderResponseDTO acceptJob(Long workOrderId, User currentUser) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new IllegalArgumentException("Work order not found: " + workOrderId));
+
+        Technician technician = workOrder.getAssignedTechnician();
+        if (technician == null && currentUser.getRole() == Role.ROLE_TECHNICIAN) {
+            technician = technicianRepository.findByUserId(currentUser.getId()).orElse(null);
+            if (technician != null) {
+                workOrder.setAssignedTechnician(technician);
+            }
+        }
+
+        workOrder.setDispatchStatus("ACCEPTED");
+        workOrder.setStatus(WorkOrderStatus.ASSIGNED);
+        if (workOrder.getRespondedAt() == null) {
+            workOrder.setRespondedAt(Instant.now());
+        }
+
+        if (technician != null) {
+            technician.setActiveJobsCount(technician.getActiveJobsCount() + 1);
+            technician.setStatus("ON_JOB");
+            technicianRepository.save(technician);
+        }
+
+        WorkOrder updated = workOrderRepository.save(workOrder);
+
+        AuditLog log = AuditLog.builder()
+                .workOrder(updated)
+                .performedBy(currentUser)
+                .action("ACCEPTED")
+                .fromStatus(WorkOrderStatus.ASSIGNED)
+                .toStatus(WorkOrderStatus.ASSIGNED)
+                .notes("Technician " + (technician != null ? technician.getName() : currentUser.getFullName()) + " accepted the assignment.")
+                .build();
+        auditLogRepository.save(log);
+
+        // Notify Customer that technician has officially accepted and confirmed
         if (updated.getCustomer() != null) {
             try {
                 com.keystone.dto.NotificationDTO.SendNotificationRequest custNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
                 custNotif.setRecipientId(updated.getCustomer().getId());
-                custNotif.setTitle("Technician Assigned");
-                custNotif.setMessage("Technician " + technician.getName() + " has been assigned to your service request (" + updated.getWorkOrderNumber() + ").");
+                custNotif.setTitle("Technician Confirmed");
+                custNotif.setMessage("Technician " + (technician != null ? technician.getName() : "Specialist") + " has accepted and is assigned to your service request (" + updated.getWorkOrderNumber() + ").");
                 custNotif.setType("STATUS_UPDATE");
                 custNotif.setReferenceId(updated.getId());
                 notificationService.sendNotification(custNotif);
+            } catch (Exception ignored) {}
+        }
+
+        // Notify Admin that technician accepted
+        if (updated.getAdminId() != null) {
+            try {
+                com.keystone.dto.NotificationDTO.SendNotificationRequest adminNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
+                adminNotif.setRecipientId(updated.getAdminId());
+                adminNotif.setTitle("Technician Accepted Assignment");
+                adminNotif.setMessage("Technician " + (technician != null ? technician.getName() : currentUser.getFullName()) + " accepted Work Order " + updated.getWorkOrderNumber() + ".");
+                adminNotif.setType("DISPATCH");
+                adminNotif.setReferenceId(updated.getId());
+                notificationService.sendNotification(adminNotif);
+            } catch (Exception ignored) {}
+        }
+
+        return mapToDTO(updated);
+    }
+
+    @Transactional
+    public WorkOrderDTO.WorkOrderResponseDTO rejectJob(Long workOrderId, String reason, User currentUser) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new IllegalArgumentException("Work order not found: " + workOrderId));
+
+        Technician oldTech = workOrder.getAssignedTechnician();
+        String techName = (oldTech != null) ? oldTech.getName() : currentUser.getFullName();
+        String effectiveReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Technician busy / unable to accept";
+
+        if (oldTech != null && "ACCEPTED".equalsIgnoreCase(workOrder.getDispatchStatus())) {
+            oldTech.setActiveJobsCount(Math.max(0, oldTech.getActiveJobsCount() - 1));
+            if (oldTech.getActiveJobsCount() == 0) oldTech.setStatus("AVAILABLE");
+            technicianRepository.save(oldTech);
+        }
+
+        workOrder.setDispatchStatus("REJECTED");
+        workOrder.setDispatchRejectionReason(effectiveReason);
+        workOrder.setAssignedTechnician(null);
+        workOrder.setStatus(WorkOrderStatus.OPEN);
+
+        WorkOrder updated = workOrderRepository.save(workOrder);
+
+        AuditLog log = AuditLog.builder()
+                .workOrder(updated)
+                .performedBy(currentUser)
+                .action("REJECTED")
+                .fromStatus(WorkOrderStatus.ASSIGNED)
+                .toStatus(WorkOrderStatus.OPEN)
+                .notes("Technician " + techName + " rejected assignment. Reason: " + effectiveReason)
+                .build();
+        auditLogRepository.save(log);
+
+        // Notify Admin with Alert/Warning
+        if (updated.getAdminId() != null) {
+            try {
+                com.keystone.dto.NotificationDTO.SendNotificationRequest adminNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
+                adminNotif.setRecipientId(updated.getAdminId());
+                adminNotif.setTitle("Technician Assignment Rejected");
+                adminNotif.setMessage("Technician " + techName + " rejected Work Order " + updated.getWorkOrderNumber() + ". Reason: " + effectiveReason + ". Please assign another technician.");
+                adminNotif.setType("WARNING");
+                adminNotif.setReferenceId(updated.getId());
+                notificationService.sendNotification(adminNotif);
             } catch (Exception ignored) {}
         }
 
@@ -453,6 +559,9 @@ public class WorkOrderService {
                 list = workOrderRepository.findAll();
             }
         }
+        if (list == null || list.isEmpty()) {
+            list = workOrderRepository.findAll();
+        }
 
         return list.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
@@ -460,10 +569,18 @@ public class WorkOrderService {
     @Transactional(readOnly = true)
     public List<WorkOrderDTO.WorkOrderResponseDTO> getMyWorkOrders(User user) {
         if (user.getRole() == Role.ROLE_TECHNICIAN) {
-            return technicianRepository.findByUserId(user.getId())
+            List<WorkOrder> orders = technicianRepository.findByUserId(user.getId())
                     .map(t -> workOrderRepository.findByAssignedTechnicianId(t.getId()))
-                    .orElse(List.of())
-                    .stream().map(this::mapToDTO).collect(Collectors.toList());
+                    .orElse(List.of());
+            if (orders == null || orders.isEmpty()) {
+                orders = workOrderRepository.findAll().stream()
+                        .filter(w -> w.getAssignedTechnician() != null &&
+                                (user.getFullName().equalsIgnoreCase(w.getAssignedTechnician().getName()) ||
+                                 user.getEmail().equalsIgnoreCase(w.getAssignedTechnician().getEmail()) ||
+                                 (w.getAssignedTechnician().getUser() != null && w.getAssignedTechnician().getUser().getId().equals(user.getId()))))
+                        .collect(Collectors.toList());
+            }
+            return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         } else if (user.getRole() == Role.ROLE_CUSTOMER) {
             return workOrderRepository.findByCustomerId(user.getId())
                     .stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -575,6 +692,8 @@ public class WorkOrderService {
                 .auditLogs(auditList)
                 .createdAt(wo.getCreatedAt())
                 .updatedAt(wo.getUpdatedAt())
+                .dispatchStatus(wo.getDispatchStatus())
+                .dispatchRejectionReason(wo.getDispatchRejectionReason())
                 .build();
     }
 }

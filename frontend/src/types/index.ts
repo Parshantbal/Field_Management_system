@@ -22,6 +22,7 @@ export interface User {
   role: Role;
   phone?: string;
   adminId?: number;
+  technicianId?: number;
 }
 
 export interface AuthResponse {
@@ -181,6 +182,8 @@ export interface WorkOrder {
   auditLogs: AuditLog[];
   createdAt: string;
   updatedAt: string;
+  dispatchStatus?: 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'REJECTED';
+  dispatchRejectionReason?: string;
 }
 
 export interface TechnicianRecommendation {

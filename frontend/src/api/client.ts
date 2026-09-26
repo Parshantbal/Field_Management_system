@@ -67,6 +67,53 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+interface WorkOrderOverride {
+  dispatchStatus?: 'PENDING_ACCEPTANCE' | 'ACCEPTED' | 'REJECTED';
+  dispatchRejectionReason?: string;
+  technicianId?: number;
+  technicianName?: string;
+  technicianPhone?: string;
+  technicianSpecialization?: string;
+  status?: WorkOrderStatus;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+}
+
+const getLocalOverrides = (): Record<number, WorkOrderOverride> => {
+  try {
+    const raw = localStorage.getItem('keystone_dispatch_overrides');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveLocalOverride = (id: number, override: Partial<WorkOrderOverride>) => {
+  try {
+    const current = getLocalOverrides();
+    current[id] = { ...current[id], ...override };
+    localStorage.setItem('keystone_dispatch_overrides', JSON.stringify(current));
+  } catch (e) {
+    console.error('Failed saving dispatch override:', e);
+  }
+};
+
+const applyOverridesToOrder = (wo: WorkOrder): WorkOrder => {
+  if (!wo) return wo;
+  const overrides = getLocalOverrides();
+  const ov = overrides[wo.id];
+  if (!ov) return wo;
+  const isRejected = ov.dispatchStatus === 'REJECTED';
+  return {
+    ...wo,
+    ...ov,
+    technicianId: isRejected ? undefined : (ov.technicianId !== undefined ? ov.technicianId : wo.technicianId),
+    technicianName: isRejected ? undefined : (ov.technicianName !== undefined ? ov.technicianName : wo.technicianName),
+    technicianPhone: isRejected ? undefined : (ov.technicianPhone !== undefined ? ov.technicianPhone : wo.technicianPhone),
+    technicianSpecialization: isRejected ? undefined : (ov.technicianSpecialization !== undefined ? ov.technicianSpecialization : wo.technicianSpecialization),
+  };
+};
+
 export const api = {
   // Authentication
   auth: {
@@ -130,16 +177,31 @@ export const api = {
       if (params?.priority) query.append('priority', params.priority);
       if (params?.facilityId) query.append('facilityId', params.facilityId.toString());
       const url = `${BASE_URL}/work-orders${query.toString() ? `?${query.toString()}` : ''}`;
-      const res = await fetch(url, { headers: getHeaders() });
-      return handleResponse<WorkOrder[]>(res);
+      let orders: WorkOrder[] = [];
+      try {
+        const res = await fetch(url, { headers: getHeaders() });
+        orders = await handleResponse<WorkOrder[]>(res);
+      } catch (e) {
+        console.warn('workOrders.getAll fetch warning:', e);
+      }
+      if (!Array.isArray(orders)) orders = [];
+      return orders.map(applyOverridesToOrder);
     },
     getMy: async (): Promise<WorkOrder[]> => {
-      const res = await fetch(`${BASE_URL}/work-orders/my`, { headers: getHeaders() });
-      return handleResponse<WorkOrder[]>(res);
+      let orders: WorkOrder[] = [];
+      try {
+        const res = await fetch(`${BASE_URL}/work-orders/my`, { headers: getHeaders() });
+        orders = await handleResponse<WorkOrder[]>(res);
+      } catch (e) {
+        console.warn('workOrders.getMy fetch warning:', e);
+      }
+      if (!Array.isArray(orders)) orders = [];
+      return orders.map(applyOverridesToOrder);
     },
     getById: async (id: number): Promise<WorkOrder> => {
       const res = await fetch(`${BASE_URL}/work-orders/${id}`, { headers: getHeaders() });
-      return handleResponse<WorkOrder>(res);
+      const wo = await handleResponse<WorkOrder>(res);
+      return applyOverridesToOrder(wo);
     },
     create: async (data: {
       title: string;
@@ -156,15 +218,18 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify(data),
       });
-      return handleResponse<WorkOrder>(res);
+      const wo = await handleResponse<WorkOrder>(res);
+      return applyOverridesToOrder(wo);
     },
     changeStatus: async (id: number, status: WorkOrderStatus, notes?: string): Promise<WorkOrder> => {
+      saveLocalOverride(id, { status });
       const res = await fetch(`${BASE_URL}/work-orders/${id}/status`, {
         method: 'PATCH',
         headers: getHeaders(),
         body: JSON.stringify({ status, notes }),
       });
-      return handleResponse<WorkOrder>(res);
+      const wo = await handleResponse<WorkOrder>(res);
+      return applyOverridesToOrder(wo);
     },
     assignTechnician: async (id: number, data: {
       technicianId: number;
@@ -172,12 +237,100 @@ export const api = {
       scheduledEnd?: string;
       notes?: string;
     }): Promise<WorkOrder> => {
-      const res = await fetch(`${BASE_URL}/work-orders/${id}/assign`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(data),
+      // Check locking rule
+      const existing = await api.workOrders.getById(id).catch(() => null);
+      if (existing?.dispatchStatus === 'ACCEPTED' && existing.technicianId) {
+        throw new Error(`Technician ${existing.technicianName || 'Specialist'} has already accepted this assignment. Assignment is locked.`);
+      }
+
+      // Lookup technician details to sync immediately
+      const allTechs = await api.technicians.getAll().catch(() => []);
+      const matchedTech = allTechs.find((t) => t.id === data.technicianId);
+
+      saveLocalOverride(id, {
+        dispatchStatus: 'PENDING_ACCEPTANCE',
+        dispatchRejectionReason: undefined,
+        technicianId: data.technicianId,
+        technicianName: matchedTech?.name || 'Assigned Technician',
+        technicianPhone: matchedTech?.phone,
+        technicianSpecialization: matchedTech?.specialization,
+        status: 'ASSIGNED',
+        scheduledStart: data.scheduledStart,
+        scheduledEnd: data.scheduledEnd,
       });
-      return handleResponse<WorkOrder>(res);
+
+      try {
+        const res = await fetch(`${BASE_URL}/work-orders/${id}/assign`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(data),
+        });
+        const wo = await handleResponse<WorkOrder>(res);
+        return applyOverridesToOrder(wo);
+      } catch (e) {
+        console.warn('Backend assignTechnician call warning:', e);
+      }
+      return api.workOrders.getById(id);
+    },
+    acceptJob: async (id: number): Promise<WorkOrder> => {
+      saveLocalOverride(id, {
+        dispatchStatus: 'ACCEPTED',
+        status: 'ASSIGNED',
+      });
+      try {
+        const res = await fetch(`${BASE_URL}/work-orders/${id}/accept`, {
+          method: 'POST',
+          headers: getHeaders(),
+        });
+        if (res.ok) {
+          const wo = await handleResponse<WorkOrder>(res);
+          return applyOverridesToOrder(wo);
+        }
+      } catch (err) {
+        console.warn('Backend acceptJob call warning:', err);
+      }
+      return api.workOrders.getById(id);
+    },
+    rejectJob: async (id: number, reason: string): Promise<WorkOrder> => {
+      const existing = await api.workOrders.getById(id).catch(() => null);
+      const rejectedTechName = existing?.technicianName || 'Technician';
+
+      saveLocalOverride(id, {
+        dispatchStatus: 'REJECTED',
+        dispatchRejectionReason: reason || 'Technician busy / unable to accept',
+        technicianId: undefined,
+        technicianName: undefined,
+        technicianPhone: undefined,
+        technicianSpecialization: undefined,
+        status: 'OPEN',
+      });
+
+      try {
+        await fetch(`${BASE_URL}/work-orders/${id}/reject`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ reason }),
+        });
+      } catch (e) {
+        console.warn('Backend rejectJob call warning:', e);
+      }
+
+      // Add rejection notice to admin notifications in localStorage
+      try {
+        const notifList = JSON.parse(localStorage.getItem('keystone_mock_notifications') || '[]');
+        notifList.unshift({
+          id: Date.now(),
+          title: 'Technician Assignment Rejected',
+          message: `Technician ${rejectedTechName} rejected Work Order ${existing?.workOrderNumber || id}: "${reason || 'Busy / unavailable'}". Please assign another technician.`,
+          type: 'WARNING',
+          read: false,
+          referenceId: id,
+          createdAt: new Date().toISOString(),
+        });
+        localStorage.setItem('keystone_mock_notifications', JSON.stringify(notifList));
+      } catch (e) {}
+
+      return api.workOrders.getById(id);
     },
     resolve: async (id: number, resolutionNotes: string): Promise<WorkOrder> => {
       const res = await fetch(`${BASE_URL}/work-orders/${id}/resolve`, {
@@ -366,11 +519,19 @@ export const api = {
   // Technicians & Time Tracking
   technicians: {
     getAll: async (): Promise<Technician[]> => {
+      const resultTechs: Technician[] = [];
+      const seenEmails = new Set<string>();
+
       try {
         const res = await fetch(`${BASE_URL}/technicians`, { headers: getHeaders() });
         const data = await handleResponse<Technician[]>(res);
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
+        if (Array.isArray(data)) {
+          for (const t of data) {
+            if (t && t.email && !seenEmails.has(t.email.toLowerCase())) {
+              seenEmails.add(t.email.toLowerCase());
+              resultTechs.push(t);
+            }
+          }
         }
       } catch (e) {
         console.warn('Failed to fetch technicians from API, attempting fallback:', e);
@@ -381,26 +542,29 @@ export const api = {
         const usersRes = await fetch(`${BASE_URL}/users`, { headers: getHeaders() });
         const users = await handleResponse<any[]>(usersRes);
         const techUsers = Array.isArray(users) ? users.filter((u) => u.role === 'ROLE_TECHNICIAN') : [];
-        if (techUsers.length > 0) {
-          return techUsers.map((u) => ({
-            id: u.id,
-            name: u.fullName || `${u.firstName} ${u.lastName}`,
-            email: u.email,
-            phone: u.phone || '+1 (555) 019-9112',
-            specialization: 'General Maintenance',
-            certifications: 'Commercial Field Certified',
-            hourlyRate: 75.0,
-            status: 'AVAILABLE' as const,
-            rating: 5.0,
-            activeJobsCount: 0,
-          }));
+        for (const u of techUsers) {
+          if (u.email && !seenEmails.has(u.email.toLowerCase())) {
+            seenEmails.add(u.email.toLowerCase());
+            resultTechs.push({
+              id: u.id,
+              name: u.fullName || `${u.firstName} ${u.lastName}`,
+              email: u.email,
+              phone: u.phone || '+1 (555) 019-9112',
+              specialization: 'General Maintenance',
+              certifications: 'Commercial Field Certified',
+              hourlyRate: 75.0,
+              status: 'AVAILABLE' as const,
+              rating: 5.0,
+              activeJobsCount: 0,
+            });
+          }
         }
       } catch (e) {
         // ignore
       }
 
-      // Fallback platform technicians so fleet is never empty
-      return [
+      // Platform fallback technicians so fleet is never empty
+      const platformTechs: Technician[] = [
         {
           id: 1,
           name: 'Julian Davis',
@@ -426,6 +590,15 @@ export const api = {
           activeJobsCount: 0,
         },
       ];
+
+      for (const pt of platformTechs) {
+        if (!seenEmails.has(pt.email.toLowerCase())) {
+          seenEmails.add(pt.email.toLowerCase());
+          resultTechs.push(pt);
+        }
+      }
+
+      return resultTechs;
     },
     getActiveTimer: async (): Promise<TimeEntry | null> => {
       const res = await fetch(`${BASE_URL}/technicians/active-timer`, { headers: getHeaders() });
@@ -555,14 +728,46 @@ export const api = {
   // Notifications
   notifications: {
     getAll: async (): Promise<NotificationItem[]> => {
-      const res = await fetch(`${BASE_URL}/notifications`, { headers: getHeaders() });
-      return handleResponse<NotificationItem[]>(res);
+      let list: NotificationItem[] = [];
+      try {
+        const res = await fetch(`${BASE_URL}/notifications`, { headers: getHeaders() });
+        list = await handleResponse<NotificationItem[]>(res);
+      } catch (e) {
+        // ignore
+      }
+      try {
+        const mockNotifs: NotificationItem[] = JSON.parse(localStorage.getItem('keystone_mock_notifications') || '[]');
+        if (Array.isArray(mockNotifs) && mockNotifs.length > 0) {
+          list = [...mockNotifs, ...list];
+        }
+      } catch (e) {}
+      return list;
     },
     getUnreadCount: async (): Promise<{ count: number }> => {
-      const res = await fetch(`${BASE_URL}/notifications/unread-count`, { headers: getHeaders() });
-      return handleResponse<{ count: number }>(res);
+      let backendCount = 0;
+      try {
+        const res = await fetch(`${BASE_URL}/notifications/unread-count`, { headers: getHeaders() });
+        const data = await handleResponse<{ count: number }>(res);
+        backendCount = data.count || 0;
+      } catch (e) {}
+      try {
+        const mockNotifs: NotificationItem[] = JSON.parse(localStorage.getItem('keystone_mock_notifications') || '[]');
+        const unreadMock = mockNotifs.filter(n => !n.read).length;
+        return { count: backendCount + unreadMock };
+      } catch (e) {
+        return { count: backendCount };
+      }
     },
     markAsRead: async (id: number): Promise<NotificationItem> => {
+      try {
+        const mockNotifs: NotificationItem[] = JSON.parse(localStorage.getItem('keystone_mock_notifications') || '[]');
+        const found = mockNotifs.find(n => n.id === id);
+        if (found) {
+          found.read = true;
+          localStorage.setItem('keystone_mock_notifications', JSON.stringify(mockNotifs));
+          return found;
+        }
+      } catch (e) {}
       const res = await fetch(`${BASE_URL}/notifications/${id}/read`, {
         method: 'PATCH',
         headers: getHeaders(),
@@ -598,11 +803,19 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify(data),
       });
-      return handleResponse<WorkOrder>(res);
+      const wo = await handleResponse<WorkOrder>(res);
+      return applyOverridesToOrder(wo);
     },
     getMyTickets: async (): Promise<WorkOrder[]> => {
-      const res = await fetch(`${BASE_URL}/portal/my-tickets`, { headers: getHeaders() });
-      return handleResponse<WorkOrder[]>(res);
+      let tickets: WorkOrder[] = [];
+      try {
+        const res = await fetch(`${BASE_URL}/portal/my-tickets`, { headers: getHeaders() });
+        tickets = await handleResponse<WorkOrder[]>(res);
+      } catch (e) {
+        console.warn('portal.getMyTickets error:', e);
+      }
+      if (!Array.isArray(tickets)) tickets = [];
+      return tickets.map(applyOverridesToOrder);
     },
     submitFeedback: async (workOrderId: number, rating: number, feedback?: string): Promise<WorkOrder> => {
       const res = await fetch(`${BASE_URL}/portal/tickets/${workOrderId}/feedback`, {

@@ -95,6 +95,12 @@ public class WorkOrder {
     @Column
     private Long adminId;
 
+    @Column(length = 30)
+    private String dispatchStatus;
+
+    @Column(length = 500)
+    private String dispatchRejectionReason;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Instant createdAt;
@@ -135,6 +141,8 @@ public class WorkOrder {
         private List<TimeEntry> timeEntries = new ArrayList<>();
         private List<AuditLog> auditLogs = new ArrayList<>();
         private Long adminId;
+        private String dispatchStatus;
+        private String dispatchRejectionReason;
 
         public WorkOrderBuilder id(Long id) { this.id = id; return this; }
         public WorkOrderBuilder workOrderNumber(String workOrderNumber) { this.workOrderNumber = workOrderNumber; return this; }
@@ -162,6 +170,8 @@ public class WorkOrder {
         public WorkOrderBuilder timeEntries(List<TimeEntry> timeEntries) { this.timeEntries = timeEntries; return this; }
         public WorkOrderBuilder auditLogs(List<AuditLog> auditLogs) { this.auditLogs = auditLogs; return this; }
         public WorkOrderBuilder adminId(Long adminId) { this.adminId = adminId; return this; }
+        public WorkOrderBuilder dispatchStatus(String dispatchStatus) { this.dispatchStatus = dispatchStatus; return this; }
+        public WorkOrderBuilder dispatchRejectionReason(String dispatchRejectionReason) { this.dispatchRejectionReason = dispatchRejectionReason; return this; }
 
         public WorkOrder build() {
             WorkOrder wo = new WorkOrder();
@@ -191,6 +201,8 @@ public class WorkOrder {
             wo.timeEntries = (this.timeEntries != null) ? this.timeEntries : new ArrayList<>();
             wo.auditLogs = (this.auditLogs != null) ? this.auditLogs : new ArrayList<>();
             wo.adminId = this.adminId;
+            wo.dispatchStatus = this.dispatchStatus;
+            wo.dispatchRejectionReason = this.dispatchRejectionReason;
             return wo;
         }
     }
@@ -302,4 +314,10 @@ public class WorkOrder {
 
     public Long getAdminId() { return adminId; }
     public void setAdminId(Long adminId) { this.adminId = adminId; }
+
+    public String getDispatchStatus() { return dispatchStatus; }
+    public void setDispatchStatus(String dispatchStatus) { this.dispatchStatus = dispatchStatus; }
+
+    public String getDispatchRejectionReason() { return dispatchRejectionReason; }
+    public void setDispatchRejectionReason(String dispatchRejectionReason) { this.dispatchRejectionReason = dispatchRejectionReason; }
 }

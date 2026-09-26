@@ -81,6 +81,34 @@ public class WorkOrderController {
         return ResponseEntity.ok(workOrderService.assignTechnician(id, request, user));
     }
 
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<WorkOrderDTO.WorkOrderResponseDTO> acceptJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User account not found: " + principal.getId()));
+        return ResponseEntity.ok(workOrderService.acceptJob(id, user));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<WorkOrderDTO.WorkOrderResponseDTO> rejectJob(
+            @PathVariable Long id,
+            @RequestBody(required = false) WorkOrderDTO.RejectJobRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User account not found: " + principal.getId()));
+        String reason = (request != null && request.getReason() != null) ? request.getReason() : "Technician busy / unable to accept";
+        return ResponseEntity.ok(workOrderService.rejectJob(id, reason, user));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<WorkOrderDTO.WorkOrderResponseDTO> changeStatus(
             @PathVariable Long id,

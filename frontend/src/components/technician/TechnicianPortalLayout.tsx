@@ -27,11 +27,16 @@ export const TechnicianPortalLayout: React.FC = () => {
   const loadData = async () => {
     setIsRefreshing(true);
     try {
-      const [orders, partsList] = await Promise.all([
+      const [allOrders, myOrders, partsList] = await Promise.all([
         api.workOrders.getAll().catch(() => []),
+        api.workOrders.getMy().catch(() => []),
         api.inventory.getParts().catch(() => []),
       ]);
-      setWorkOrders(orders);
+      const orderMap = new Map<number, WorkOrder>();
+      [...allOrders, ...myOrders].forEach((wo) => {
+        if (wo && wo.id) orderMap.set(wo.id, wo);
+      });
+      setWorkOrders(Array.from(orderMap.values()));
       setParts(partsList);
       loadNotifications();
     } catch (e) {

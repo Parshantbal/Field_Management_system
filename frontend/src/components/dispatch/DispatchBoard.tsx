@@ -15,7 +15,9 @@ import {
   X,
   Phone,
   Award,
-  Zap
+  Zap,
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 
 interface DispatchBoardProps {
@@ -42,15 +44,21 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
   const [scheduledEnd, setScheduledEnd] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  // Unassigned or needing attention orders
+  // Unassigned, rejected, or pending acceptance orders needing dispatch attention
   const unassignedOrders = workOrders.filter(
     (wo) =>
+      wo.dispatchStatus === 'REJECTED' ||
       wo.status === 'OPEN' ||
       wo.status === 'TRIAGED' ||
-      !wo.technicianId
+      (!wo.technicianId && wo.dispatchStatus !== 'ACCEPTED') ||
+      wo.dispatchStatus === 'PENDING_ACCEPTANCE'
   );
 
   const handleOpenSmartDispatch = async (wo: WorkOrder) => {
+    if (wo.dispatchStatus === 'ACCEPTED') {
+      alert(`Technician ${wo.technicianName || 'Specialist'} has already accepted this assignment. Assignment is locked.`);
+      return;
+    }
     setSelectedOrderForDispatch(wo);
     setIsLoadingRecs(true);
     try {
@@ -169,6 +177,24 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
                         </>
                       )}
                     </div>
+
+                    {/* Rejection Alert */}
+                    {wo.dispatchStatus === 'REJECTED' && (
+                      <div className="mt-2 p-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <div>
+                          <strong className="text-rose-200">Assignment Declined:</strong> {wo.dispatchRejectionReason || 'Technician busy / unable to accept'}. Please assign another technician.
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pending Acceptance Indicator */}
+                    {wo.dispatchStatus === 'PENDING_ACCEPTANCE' && (
+                      <div className="mt-2 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                        <span>Request sent to <strong>{wo.technicianName}</strong> — Awaiting technician confirmation.</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
@@ -177,13 +203,24 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
                       riskLevel={wo.slaRiskLevel}
                     />
 
-                    <button
-                      onClick={() => handleOpenSmartDispatch(wo)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-600 to-sky-600 hover:from-brand-500 hover:to-sky-500 text-white text-xs font-bold rounded-xl shadow-md shadow-brand-600/30 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      Smart Dispatch
-                    </button>
+                    {wo.dispatchStatus === 'ACCEPTED' ? (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        Locked (Accepted)
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenSmartDispatch(wo)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-bold rounded-xl shadow-md transition-all ${
+                          wo.dispatchStatus === 'REJECTED'
+                            ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30'
+                            : 'bg-gradient-to-r from-brand-600 to-sky-600 hover:from-brand-500 hover:to-sky-500 shadow-brand-600/30'
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        {wo.dispatchStatus === 'REJECTED' ? 'Reassign Tech' : (wo.dispatchStatus === 'PENDING_ACCEPTANCE' ? 'Update Dispatch' : 'Smart Dispatch')}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

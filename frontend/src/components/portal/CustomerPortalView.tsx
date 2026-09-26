@@ -242,7 +242,7 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
                   </p>
 
                   {/* Technician ETA / Assigned info */}
-                  {ticket.technicianName && (
+                  {ticket.technicianName && ticket.dispatchStatus !== 'PENDING_ACCEPTANCE' && (
                     <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-slate-800/40 border border-amber-200/70 dark:border-slate-800 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                         <HardHat className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -251,6 +251,18 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
                       {ticket.technicianPhone && (
                         <span className="text-slate-600 dark:text-slate-400 font-mono text-[11px]">{ticket.technicianPhone}</span>
                       )}
+                    </div>
+                  )}
+
+                  {ticket.dispatchStatus === 'PENDING_ACCEPTANCE' && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-500 animate-pulse shrink-0" />
+                        <span>Dispatch In Progress: Request routed to specialist, awaiting technician confirmation...</span>
+                      </div>
+                      <span className="font-bold text-[10px] uppercase tracking-wider bg-amber-500/20 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded">
+                        Awaiting Acceptance
+                      </span>
                     </div>
                   )}
 

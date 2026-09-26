@@ -16,7 +16,10 @@ import {
   Phone,
   Navigation,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  X,
+  Bell,
+  ShieldCheck
 } from 'lucide-react';
 
 interface TechnicianFieldViewProps {
@@ -41,6 +44,11 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
   const [resolvingWo, setResolvingWo] = useState<WorkOrder | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState<string>('');
 
+  // Rejection modal state
+  const [rejectingWo, setRejectingWo] = useState<WorkOrder | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>('');
+  const [isAcceptingId, setIsAcceptingId] = useState<number | null>(null);
+
   const fetchActiveTimer = async () => {
     try {
       const timer = await api.technicians.getActiveTimer();
@@ -56,15 +64,74 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Filter orders where technician is assigned or active
-  const myAssignedOrders = workOrders.filter(
+  // Resilient matching logic for this technician
+  const isForMe = (wo: WorkOrder) => {
+    if (!user) return false;
+    if (user.technicianId && wo.technicianId === user.technicianId) return true;
+    if (user.id && wo.technicianId === user.id) return true;
+    if (wo.technicianName && user.fullName) {
+      const wName = wo.technicianName.trim().toLowerCase();
+      const uName = user.fullName.trim().toLowerCase();
+      if (wName === uName || wName.includes(uName) || uName.includes(wName)) return true;
+    }
+    if (wo.technicianName && user.firstName) {
+      if (wo.technicianName.toLowerCase().includes(user.firstName.toLowerCase())) return true;
+    }
+    if (wo.technicianName && user.email) {
+      const prefix = user.email.split('@')[0].toLowerCase();
+      if (wo.technicianName.toLowerCase().includes(prefix)) return true;
+    }
+    return false;
+  };
+
+  const matchedOrders = workOrders.filter(isForMe);
+  // If matched is 0, allow technician to see assigned orders so they are never blocked
+  const effectiveOrders = matchedOrders.length > 0
+    ? matchedOrders
+    : workOrders.filter(wo => wo.status === 'ASSIGNED' || wo.dispatchStatus === 'PENDING_ACCEPTANCE');
+
+  // 1. Pending Assignment Requests (Awaiting technician acceptance)
+  const pendingRequests = effectiveOrders.filter(
+    (wo) => wo.dispatchStatus === 'PENDING_ACCEPTANCE'
+  );
+
+  // 2. Active Accepted/Assigned orders
+  const myAssignedOrders = effectiveOrders.filter(
     (wo) =>
-      wo.technicianName === user?.fullName ||
+      wo.dispatchStatus !== 'PENDING_ACCEPTANCE' &&
+      wo.dispatchStatus !== 'REJECTED' &&
       (wo.status === 'ASSIGNED' ||
         wo.status === 'EN_ROUTE' ||
         wo.status === 'ON_SITE' ||
         wo.status === 'ON_HOLD')
   );
+
+  const handleAcceptJob = async (woId: number) => {
+    setIsAcceptingId(woId);
+    try {
+      await api.workOrders.acceptJob(woId);
+      onRefresh();
+    } catch (err: any) {
+      alert(`Could not accept job: ${err.message}`);
+    } finally {
+      setIsAcceptingId(null);
+    }
+  };
+
+  const handleRejectJob = async () => {
+    if (!rejectingWo) return;
+    try {
+      await api.workOrders.rejectJob(
+        rejectingWo.id,
+        rejectReason.trim() || 'Currently busy / unavailable'
+      );
+      setRejectingWo(null);
+      setRejectReason('');
+      onRefresh();
+    } catch (err: any) {
+      alert(`Could not decline job: ${err.message}`);
+    }
+  };
 
   const handleStartTimer = async (workOrderId: number, type: 'TRAVEL' | 'ON_SITE') => {
     setIsTimerLoading(true);
@@ -173,6 +240,101 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* 🔔 Incoming Job Offers / Assignment Requests */}
+      {pendingRequests.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <span>Incoming Assignment Requests ({pendingRequests.length})</span>
+            </h2>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-500/30">
+              Awaiting Your Decision
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {pendingRequests.map((wo) => (
+              <div
+                key={wo.id}
+                className="p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-500/10 border-2 border-amber-400/80 dark:border-amber-500/50 space-y-4 shadow-lg shadow-amber-500/5 transition-all"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-amber-900 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-500/20 px-2.5 py-0.5 rounded border border-amber-300 dark:border-amber-500/30">
+                      {wo.workOrderNumber}
+                    </span>
+                    <PriorityBadge priority={wo.priority} />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-mono">
+                      NEW JOB OFFER
+                    </span>
+                  </div>
+                  <SlaCountdown dueTime={wo.resolutionSlaDue} riskLevel={wo.slaRiskLevel} />
+                </div>
+
+                <div>
+                  <h3
+                    onClick={() => onSelectWorkOrder(wo.id)}
+                    className="text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                  >
+                    {wo.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                      <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      {wo.facilityName}
+                    </span>
+                    <span>•</span>
+                    <span>{wo.facilityAddress}</span>
+                    {wo.assetName && (
+                      <>
+                        <span>•</span>
+                        <span className="text-amber-700 dark:text-amber-300 font-mono font-medium">Asset: {wo.assetName}</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <p className="text-xs text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-900 p-3.5 rounded-xl border border-amber-200 dark:border-slate-800 leading-relaxed">
+                  {wo.description}
+                </p>
+
+                {/* Accept / Decline Action Bar */}
+                <div className="pt-3 border-t border-amber-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                    Accepting will confirm your dispatch and display your details to the customer.
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRejectingWo(wo)}
+                      className="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <X className="w-4 h-4" />
+                      Decline / Busy
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isAcceptingId === wo.id}
+                      onClick={() => handleAcceptJob(wo.id)}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-600/30 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      {isAcceptingId === wo.id ? 'Accepting...' : 'Accept Assignment'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Active Work Orders */}
       <div className="space-y-4">
@@ -432,6 +594,90 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Decline / Busy Reason Modal */}
+      {rejectingWo && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                <AlertCircle className="w-5 h-5" />
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">Decline Assignment Request</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingWo(null);
+                  setRejectReason('');
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Please specify the reason for declining Work Order <strong className="text-slate-900 dark:text-white">{rejectingWo.workOrderNumber}</strong>. The admin will be notified immediately to reassign another specialist.
+            </p>
+
+            {/* Quick Reason Buttons */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-500 block">Select Quick Reason:</label>
+              {[
+                'Currently busy on an emergency job',
+                'Shift ended / Currently off-duty',
+                'Required parts or tools unavailable',
+                'Outside primary coverage area / Severe delay',
+              ].map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setRejectReason(reason)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                    rejectReason === reason
+                      ? 'bg-rose-50 dark:bg-rose-500/20 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-750'
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-500 block mb-1">Or write custom reason:</label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. In transit with 2 open tickets..."
+                rows={2}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingWo(null);
+                  setRejectReason('');
+                }}
+                className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectJob}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow-md shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                Confirm Decline
+              </button>
+            </div>
           </div>
         </div>
       )}
