@@ -16,7 +16,11 @@ import {
   Building2
 } from 'lucide-react';
 
-export const UserManagementView: React.FC = () => {
+interface UserManagementViewProps {
+  onUserCreated?: () => void;
+}
+
+export const UserManagementView: React.FC<UserManagementViewProps> = ({ onUserCreated }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -34,6 +38,8 @@ export const UserManagementView: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('ROLE_TECHNICIAN');
+  const [specialization, setSpecialization] = useState('General Maintenance');
+  const [hourlyRate, setHourlyRate] = useState('75.00');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,11 +84,16 @@ export const UserManagementView: React.FC = () => {
         email,
         phone,
         password,
-        role
+        role,
+        specialization: role === 'ROLE_TECHNICIAN' ? specialization : undefined,
+        hourlyRate: role === 'ROLE_TECHNICIAN' ? (parseFloat(hourlyRate) || 75.0) : undefined,
       });
       setIsCreateOpen(false);
       resetForm();
-      fetchUsers();
+      await fetchUsers();
+      if (onUserCreated) {
+        onUserCreated();
+      }
     } catch (err: any) {
       setFormError(err.message || 'Failed to create user');
     } finally {
@@ -132,6 +143,8 @@ export const UserManagementView: React.FC = () => {
     setPhone('');
     setPassword('');
     setRole('ROLE_TECHNICIAN');
+    setSpecialization('General Maintenance');
+    setHourlyRate('75.00');
     setFormError(null);
   };
 
@@ -360,6 +373,41 @@ export const UserManagementView: React.FC = () => {
                   <option value="ROLE_ADMIN">ROLE_ADMIN (Operations Administrator)</option>
                 </select>
               </div>
+
+              {role === 'ROLE_TECHNICIAN' && !editingUser && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Technician Specialization
+                    </label>
+                    <select
+                      value={specialization}
+                      onChange={(e) => setSpecialization(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="General Maintenance">General Maintenance</option>
+                      <option value="HVAC & Climate Control Systems">HVAC & Climate Control Systems</option>
+                      <option value="High Voltage & Industrial Electrical">High Voltage & Industrial Electrical</option>
+                      <option value="Plumbing & Mechanical Systems">Plumbing & Mechanical Systems</option>
+                      <option value="Fire Safety & Security Systems">Fire Safety & Security Systems</option>
+                      <option value="Automation & SCADA Robotics">Automation & SCADA Robotics</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Hourly Rate ($/hr)
+                    </label>
+                    <input
+                      type="number"
+                      step="5"
+                      min="10"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
                 <button

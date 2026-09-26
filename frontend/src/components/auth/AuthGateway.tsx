@@ -49,6 +49,8 @@ export const AuthGateway: React.FC = () => {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState<Role>('ROLE_CUSTOMER');
+  const [regAdminId, setRegAdminId] = useState('');
+  const [regSpecialization, setRegSpecialization] = useState('General Maintenance');
 
   const isSignIn = tab === 'signin';
 
@@ -73,6 +75,8 @@ export const AuthGateway: React.FC = () => {
         phone: regPhone,
         password: regPassword,
         role: regRole,
+        adminId: regAdminId ? parseInt(regAdminId, 10) : undefined,
+        specialization: regRole === 'ROLE_TECHNICIAN' ? regSpecialization : undefined,
       });
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check your information.');
@@ -652,6 +656,55 @@ export const AuthGateway: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {(regRole === 'ROLE_TECHNICIAN' || regRole === 'ROLE_CUSTOMER') && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/40 border border-slate-700/50 space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className={`block text-[11px] font-semibold transition-colors ${
+                          !isSignIn ? 'text-blue-100' : 'text-slate-700 dark:text-slate-400'
+                        }`}>
+                          Operations Admin ID (Optional)
+                        </label>
+                        <span className="text-[10px] text-slate-400">e.g. 1, 2</span>
+                      </div>
+                      <input
+                        type="number"
+                        placeholder="Leave blank or enter Admin ID"
+                        value={regAdminId}
+                        onChange={(e) => setRegAdminId(e.target.value)}
+                        disabled={isSignIn}
+                        className={`w-full rounded-xl px-3 py-1.5 text-xs transition-all focus:outline-none ${
+                          !isSignIn ? 'auth-input-active' : 'auth-input-inactive'
+                        }`}
+                      />
+                    </div>
+
+                    {regRole === 'ROLE_TECHNICIAN' && (
+                      <div>
+                        <label className={`block text-[11px] font-semibold mb-1 transition-colors ${
+                          !isSignIn ? 'text-blue-100' : 'text-slate-700 dark:text-slate-400'
+                        }`}>
+                          Primary Specialization
+                        </label>
+                        <select
+                          value={regSpecialization}
+                          onChange={(e) => setRegSpecialization(e.target.value)}
+                          disabled={isSignIn}
+                          className={`w-full rounded-xl px-3 py-1.5 text-xs transition-all focus:outline-none ${
+                            !isSignIn ? 'auth-input-active' : 'auth-input-inactive'
+                          }`}
+                        >
+                          <option value="General Maintenance">General Maintenance</option>
+                          <option value="HVAC & Climate Control Systems">HVAC & Climate Control Systems</option>
+                          <option value="High Voltage & Industrial Electrical">High Voltage & Industrial Electrical</option>
+                          <option value="Plumbing & Mechanical Systems">Plumbing & Mechanical Systems</option>
+                          <option value="Fire Safety & Security Systems">Fire Safety & Security Systems</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   type="submit"

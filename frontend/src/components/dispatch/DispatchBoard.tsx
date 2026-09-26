@@ -58,6 +58,8 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
       setRecommendations(recs);
       if (recs.length > 0) {
         setDispatchTechId(recs[0].technicianId);
+      } else if (technicians.length > 0) {
+        setDispatchTechId(technicians[0].id);
       }
       // Set default schedule to next 2 hours
       const now = new Date();
@@ -292,8 +294,19 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
                 </label>
 
                 {isLoadingRecs ? (
-                  <div className="py-6 text-center text-slate-400 text-xs">
+                  <div className="py-6 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                    <div className="w-3.5 h-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                     Calculating skill match scores...
+                  </div>
+                ) : recommendations.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 space-y-1">
+                    <p className="font-semibold text-amber-400 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" />
+                      No automated skill match found
+                    </p>
+                    <p className="text-slate-400">
+                      Please manually select a technician from your fleet dropdown below to assign this ticket.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2.5">
@@ -305,7 +318,7 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
                           onClick={() => setDispatchTechId(rec.technicianId)}
                           className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                             isSelected
-                              ? 'bg-brand-500/15 border-brand-500 text-white shadow-md'
+                              ? 'bg-brand-500/15 border-brand-500 text-white shadow-md ring-1 ring-brand-500/50'
                               : 'bg-slate-800/40 border-slate-800 hover:border-slate-700 text-slate-300'
                           }`}
                         >
@@ -339,6 +352,29 @@ export const DispatchBoard: React.FC<DispatchBoardProps> = ({
                     })}
                   </div>
                 )}
+              </div>
+
+              {/* Direct Fleet Selection Dropdown */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center justify-between">
+                  <span>Selected Field Technician *</span>
+                  <span className="text-[11px] text-slate-400">
+                    {technicians.length} technician{technicians.length !== 1 ? 's' : ''} in fleet
+                  </span>
+                </label>
+                <select
+                  value={dispatchTechId || ''}
+                  onChange={(e) => setDispatchTechId(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500"
+                  required
+                >
+                  <option value="" disabled>-- Select a Technician --</option>
+                  {technicians.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} — {t.specialization} ({t.status.replace('_', ' ')}) [${t.hourlyRate?.toFixed(2)}/hr]
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Scheduling window */}

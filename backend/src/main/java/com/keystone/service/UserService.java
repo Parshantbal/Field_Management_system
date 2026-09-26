@@ -38,7 +38,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserDTO.UserResponseDTO> getAllUsers(Long adminId) {
-        List<User> list = (adminId != null) ? userRepository.findByAdminId(adminId) : userRepository.findAll();
+        List<User> list;
+        if (adminId != null) {
+            list = userRepository.findByAdminIdOrAdminIdIsNull(adminId);
+            if (list.isEmpty()) {
+                list = userRepository.findAll();
+            }
+        } else {
+            list = userRepository.findAll();
+        }
         return list.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -107,9 +115,16 @@ public class UserService {
             saved.setAdminId(saved.getId());
             saved = userRepository.save(saved);
         } else if (saved.getRole() == Role.ROLE_TECHNICIAN) {
+            String spec = (request.getSpecialization() != null && !request.getSpecialization().isBlank())
+                    ? request.getSpecialization().trim()
+                    : "General Maintenance";
+            java.math.BigDecimal rate = request.getHourlyRate() != null
+                    ? request.getHourlyRate()
+                    : new java.math.BigDecimal("75.00");
             Technician tech = Technician.builder()
                     .user(saved)
-                    .specialization("General Maintenance")
+                    .specialization(spec)
+                    .hourlyRate(rate)
                     .status("AVAILABLE")
                     .adminId(adminId != null ? adminId : saved.getAdminId())
                     .build();

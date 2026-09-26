@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { WorkOrder, WorkOrderStatus, Part } from '../../types';
+import { WorkOrder, WorkOrderStatus, Part, Technician } from '../../types';
 import { PriorityBadge } from '../common/PriorityBadge';
 import { StatusBadge } from '../common/StatusBadge';
 import { SlaCountdown } from '../common/SlaCountdown';
@@ -27,6 +27,7 @@ interface WorkOrderDetailModalProps {
   onRefresh: () => void;
   onOpenDispatchModal?: (workOrderId: number) => void;
   partsCatalog?: Part[];
+  technicians?: Technician[];
 }
 
 const LIFECYCLE_STEPS: WorkOrderStatus[] = [
@@ -45,10 +46,12 @@ export const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
   onRefresh,
   onOpenDispatchModal,
   partsCatalog = [],
+  technicians = [],
 }) => {
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'parts' | 'labor' | 'audit'>('overview');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAssigningTech, setIsAssigningTech] = useState(false);
   const [resolutionText, setResolutionText] = useState('');
   const [showResolutionForm, setShowResolutionForm] = useState(false);
 
@@ -56,6 +59,26 @@ export const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
   const [showAddPart, setShowAddPart] = useState(false);
   const [selectedPartId, setSelectedPartId] = useState<number>(0);
   const [partQty, setPartQty] = useState<number>(1);
+
+  const handleQuickAssignTechnician = async (techId: number) => {
+    if (!workOrder || !techId) return;
+    setIsAssigningTech(true);
+    try {
+      const now = new Date();
+      const end = new Date(now.getTime() + 2 * 3600000);
+      await api.workOrders.assignTechnician(workOrder.id, {
+        technicianId: techId,
+        scheduledStart: now.toISOString(),
+        scheduledEnd: end.toISOString(),
+        notes: 'Assigned via Operations Console',
+      });
+      onRefresh();
+    } catch (err: any) {
+      alert(`Assignment failed: ${err.message}`);
+    } finally {
+      setIsAssigningTech(false);
+    }
+  };
 
   if (!workOrder) return null;
 
@@ -288,6 +311,36 @@ export const WorkOrderDetailModal: React.FC<WorkOrderDetailModalProps> = ({
                   ) : (
                     <div className="py-3 text-center text-xs text-slate-500">
                       No technician currently assigned to this order.
+                    </div>
+                  )}
+
+                  {/* Quick Direct Assign/Switch for Admin */}
+                  {(role === 'ROLE_ADMIN' || role === 'ROLE_DISPATCHER') && technicians.length > 0 && (
+                    <div className="pt-2.5 border-t border-slate-700/60 mt-2 space-y-1.5">
+                      <label className="text-[11px] font-semibold text-slate-400 block">
+                        Quick Assign / Change Fleet Crew:
+                      </label>
+                      <select
+                        value={workOrder.technicianId || ''}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          if (val) handleQuickAssignTechnician(val);
+                        }}
+                        disabled={isAssigningTech}
+                        className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500 font-medium disabled:opacity-50"
+                      >
+                        <option value="" disabled>-- Select Fleet Technician --</option>
+                        {technicians.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} — {t.specialization} ({t.status.replace('_', ' ')})
+                          </option>
+                        ))}
+                      </select>
+                      {isAssigningTech && (
+                        <p className="text-[10px] text-brand-400 animate-pulse font-mono">
+                          Assigning crew to work order...
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

@@ -33,9 +33,15 @@ public class DispatchService {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("Work order not found: " + workOrderId));
 
-        List<Technician> allTechs = (workOrder.getAdminId() != null)
-                ? technicianRepository.findByAdminId(workOrder.getAdminId())
-                : technicianRepository.findAll();
+        List<Technician> allTechs;
+        if (workOrder.getAdminId() != null) {
+            allTechs = technicianRepository.findByAdminIdOrAdminIdIsNull(workOrder.getAdminId());
+            if (allTechs.isEmpty()) {
+                allTechs = technicianRepository.findAll();
+            }
+        } else {
+            allTechs = technicianRepository.findAll();
+        }
         String assetCategory = (workOrder.getAsset() != null && workOrder.getAsset().getCategory() != null)
                 ? workOrder.getAsset().getCategory().toUpperCase()
                 : "";

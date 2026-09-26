@@ -101,6 +101,8 @@ public class AuthService {
 
         Role assignedRole = request.getRole() != null ? request.getRole() : Role.ROLE_CUSTOMER;
 
+        Long adminId = request.getAdminId();
+
         User user = User.builder()
                 .email(request.getEmail().toLowerCase().trim())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -108,6 +110,7 @@ public class AuthService {
                 .lastName(request.getLastName().trim())
                 .role(assignedRole)
                 .phone(request.getPhone())
+                .adminId(adminId)
                 .active(true)
                 .build();
 
@@ -117,9 +120,12 @@ public class AuthService {
             saved.setAdminId(saved.getId());
             saved = userRepository.save(saved);
         } else if (saved.getRole() == Role.ROLE_TECHNICIAN) {
+            String spec = (request.getSpecialization() != null && !request.getSpecialization().isBlank())
+                    ? request.getSpecialization().trim()
+                    : "General Maintenance";
             Technician tech = Technician.builder()
                     .user(saved)
-                    .specialization("General Maintenance")
+                    .specialization(spec)
                     .status("AVAILABLE")
                     .adminId(saved.getAdminId())
                     .build();

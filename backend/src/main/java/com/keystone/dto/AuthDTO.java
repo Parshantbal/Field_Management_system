@@ -52,6 +52,8 @@ public class AuthDTO {
 
         private Role role;
         private String phone;
+        private Long adminId;
+        private String specialization;
 
         public RegisterRequest() {}
         public RegisterRequest(String email, String password, String firstName, String lastName, Role role, String phone) {
@@ -75,6 +77,10 @@ public class AuthDTO {
         public void setRole(Role role) { this.role = role; }
         public String getPhone() { return phone; }
         public void setPhone(String phone) { this.phone = phone; }
+        public Long getAdminId() { return adminId; }
+        public void setAdminId(Long adminId) { this.adminId = adminId; }
+        public String getSpecialization() { return specialization; }
+        public void setSpecialization(String specialization) { this.specialization = specialization; }
     }
 
     public static class AuthResponse {

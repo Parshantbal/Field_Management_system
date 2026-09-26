@@ -29,7 +29,11 @@ public class TechnicianController {
     public ResponseEntity<List<Technician>> getAllTechnicians(@AuthenticationPrincipal UserPrincipal principal) {
         if (principal != null) {
             Long adminId = principal.getAdminId() != null ? principal.getAdminId() : principal.getId();
-            return ResponseEntity.ok(technicianRepository.findByAdminId(adminId));
+            List<Technician> list = technicianRepository.findByAdminIdOrAdminIdIsNull(adminId);
+            if (list == null || list.isEmpty()) {
+                list = technicianRepository.findAll();
+            }
+            return ResponseEntity.ok(list);
         }
         return ResponseEntity.ok(technicianRepository.findAll());
     }

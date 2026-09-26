@@ -68,7 +68,15 @@ public class ReportService {
             return new ReportDTO.FacilityCostDTO(fac.getName(), facOrders.size(), cost);
         }).collect(Collectors.toList());
 
-        List<Technician> techSourceList = (adminId != null) ? technicianRepository.findByAdminId(adminId) : technicianRepository.findAll();
+        List<Technician> techSourceList;
+        if (adminId != null) {
+            techSourceList = technicianRepository.findByAdminIdOrAdminIdIsNull(adminId);
+            if (techSourceList.isEmpty()) {
+                techSourceList = technicianRepository.findAll();
+            }
+        } else {
+            techSourceList = technicianRepository.findAll();
+        }
         List<ReportDTO.TechnicianMetricDTO> techList = techSourceList.stream().map(tech -> {
             List<WorkOrder> techOrders = allOrders.stream()
                     .filter(w -> w.getAssignedTechnician() != null && w.getAssignedTechnician().getId().equals(tech.getId()))

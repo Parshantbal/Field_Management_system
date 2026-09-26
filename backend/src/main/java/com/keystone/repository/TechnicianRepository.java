@@ -12,4 +12,5 @@ public interface TechnicianRepository extends JpaRepository<Technician, Long> {
     Optional<Technician> findByUserId(Long userId);
     List<Technician> findByStatus(String status);
     List<Technician> findByAdminId(Long adminId);
+    List<Technician> findByAdminIdOrAdminIdIsNull(Long adminId);
 }

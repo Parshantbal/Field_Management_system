@@ -40,6 +40,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<Role>('ROLE_CUSTOMER');
+  const [adminId, setAdminId] = useState('');
+  const [specialization, setSpecialization] = useState('General Maintenance');
 
   if (!isOpen) return null;
 
@@ -59,6 +61,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           lastName: lastName.trim(),
           phone: phone.trim() || undefined,
           role,
+          adminId: adminId ? parseInt(adminId, 10) : undefined,
+          specialization: role === 'ROLE_TECHNICIAN' ? specialization : undefined,
         });
       }
       onClose();
@@ -223,6 +227,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     </div>
                   </button>
                 </div>
+
+                {(role === 'ROLE_TECHNICIAN' || role === 'ROLE_CUSTOMER') && (
+                  <div className="mt-3 p-3 rounded-xl bg-slate-850/80 border border-slate-750 space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-slate-300">
+                          Operations Admin ID (Optional)
+                        </label>
+                        <span className="text-[10px] text-slate-400">e.g. 1, 2</span>
+                      </div>
+                      <input
+                        type="number"
+                        placeholder="Leave blank or enter Admin ID"
+                        value={adminId}
+                        onChange={(e) => setAdminId(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+
+                    {role === 'ROLE_TECHNICIAN' && (
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                          Primary Specialization
+                        </label>
+                        <select
+                          value={specialization}
+                          onChange={(e) => setSpecialization(e.target.value)}
+                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-brand-500"
+                        >
+                          <option value="General Maintenance">General Maintenance</option>
+                          <option value="HVAC & Climate Control Systems">HVAC & Climate Control Systems</option>
+                          <option value="High Voltage & Industrial Electrical">High Voltage & Industrial Electrical</option>
+                          <option value="Plumbing & Mechanical Systems">Plumbing & Mechanical Systems</option>
+                          <option value="Fire Safety & Security Systems">Fire Safety & Security Systems</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}

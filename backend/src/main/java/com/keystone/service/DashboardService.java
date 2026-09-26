@@ -47,7 +47,15 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.DashboardResponseDTO getDashboardData(Long adminId) {
         List<WorkOrder> allOrders = (adminId != null) ? workOrderRepository.findByAdminId(adminId) : workOrderRepository.findAll();
-        List<Technician> allTechs = (adminId != null) ? technicianRepository.findByAdminId(adminId) : technicianRepository.findAll();
+        List<Technician> allTechs;
+        if (adminId != null) {
+            allTechs = technicianRepository.findByAdminIdOrAdminIdIsNull(adminId);
+            if (allTechs.isEmpty()) {
+                allTechs = technicianRepository.findAll();
+            }
+        } else {
+            allTechs = technicianRepository.findAll();
+        }
         Instant now = Instant.now();
 
         long totalOrders = allOrders.size();

@@ -196,6 +196,9 @@ public class WorkOrderService {
         workOrder.setAssignedTechnician(technician);
         technician.setActiveJobsCount(technician.getActiveJobsCount() + 1);
         technician.setStatus("ON_JOB");
+        if (technician.getAdminId() == null && workOrder.getAdminId() != null) {
+            technician.setAdminId(workOrder.getAdminId());
+        }
         technicianRepository.save(technician);
 
         if (request.getScheduledStart() != null) workOrder.setScheduledStart(request.getScheduledStart());

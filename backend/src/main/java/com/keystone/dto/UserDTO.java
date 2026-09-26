@@ -4,6 +4,7 @@ import com.keystone.model.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public class UserDTO {
@@ -79,6 +80,10 @@ public class UserDTO {
 
         private String phone;
 
+        private String specialization;
+
+        private BigDecimal hourlyRate;
+
         public CreateUserRequest() {}
 
         public String getEmail() { return email; }
@@ -98,6 +103,12 @@ public class UserDTO {
 
         public String getPhone() { return phone; }
         public void setPhone(String phone) { this.phone = phone; }
+
+        public String getSpecialization() { return specialization; }
+        public void setSpecialization(String specialization) { this.specialization = specialization; }
+
+        public BigDecimal getHourlyRate() { return hourlyRate; }
+        public void setHourlyRate(BigDecimal hourlyRate) { this.hourlyRate = hourlyRate; }
     }
 
     public static class UpdateUserRequest {

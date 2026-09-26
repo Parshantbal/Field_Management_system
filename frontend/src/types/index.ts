@@ -41,6 +41,8 @@ export interface RegisterRequest {
   lastName: string;
   phone?: string;
   role?: Role;
+  adminId?: number;
+  specialization?: string;
 }
 
 export interface Facility {

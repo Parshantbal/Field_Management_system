@@ -103,6 +103,13 @@ export const AdminPortalLayout: React.FC = () => {
     loadAllData();
   }, [loadAllData]);
 
+  // Refresh fleet and orders whenever switching to dispatch or work-orders tab
+  useEffect(() => {
+    if (activeTab === 'dispatch' || activeTab === 'work-orders') {
+      loadAllData();
+    }
+  }, [activeTab, loadAllData]);
+
   const selectedWorkOrder = workOrders.find((w) => w.id === selectedWorkOrderId) || null;
 
   const navItems = [
@@ -557,7 +564,7 @@ export const AdminPortalLayout: React.FC = () => {
               )}
 
               {activeTab === 'users' && (
-                <UserManagementView />
+                <UserManagementView onUserCreated={loadAllData} />
               )}
 
               {activeTab === 'customers' && (
@@ -598,6 +605,7 @@ export const AdminPortalLayout: React.FC = () => {
             setActiveTab('dispatch');
           }}
           partsCatalog={parts}
+          technicians={technicians}
         />
       )}
 
