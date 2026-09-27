@@ -257,15 +257,19 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
         <button
           type="button"
           onClick={() => onFilterChange && onFilterChange('ACTIVE')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'ACTIVE'
-              ? 'bg-amber-600 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
           }`}
         >
-          <span>Active Jobs</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            activeFilter === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          <span className={activeFilter === 'ACTIVE' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+            Active Jobs
+          </span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+            activeFilter === 'ACTIVE'
+              ? 'bg-white/25 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {myAssignedOrders.length}
           </span>
@@ -274,15 +278,21 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
         <button
           type="button"
           onClick={() => onFilterChange && onFilterChange('OFFERS')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'OFFERS'
-              ? 'bg-amber-600 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
           }`}
         >
-          <span>Job Offers</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            activeFilter === 'OFFERS' ? 'bg-white/20 text-white' : pendingRequests.length > 0 ? 'bg-amber-500 text-slate-950 font-bold animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          <span className={activeFilter === 'OFFERS' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+            Job Offers
+          </span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+            activeFilter === 'OFFERS'
+              ? 'bg-white/25 text-white'
+              : pendingRequests.length > 0
+              ? 'bg-amber-500 text-slate-950 font-bold animate-pulse'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {pendingRequests.length}
           </span>
@@ -291,15 +301,19 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
         <button
           type="button"
           onClick={() => onFilterChange && onFilterChange('COMPLETED')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'COMPLETED'
-              ? 'bg-amber-600 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
           }`}
         >
-          <span>Completed</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            activeFilter === 'COMPLETED' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+          <span className={activeFilter === 'COMPLETED' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+            Completed
+          </span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+            activeFilter === 'COMPLETED'
+              ? 'bg-white/25 text-white'
+              : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-500/30'
           }`}>
             {completedOrders.length}
           </span>
@@ -309,10 +323,13 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           <button
             type="button"
             onClick={onOpenInventory}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 shadow-xs"
           >
             <Boxes className="w-3.5 h-3.5 text-amber-500" />
-            <span>Van Parts ({partsCatalog.length})</span>
+            <span className="text-slate-900 dark:text-white font-semibold">Van Parts</span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600">
+              {partsCatalog.length}
+            </span>
           </button>
         )}
       </div>

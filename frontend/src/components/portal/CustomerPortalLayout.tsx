@@ -137,77 +137,10 @@ export const CustomerPortalLayout: React.FC = () => {
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Facilities Maintenance & Tenant Requests</p>
               </div>
-
-              {/* Desktop Quick Filter Navigation Pills */}
-              <div className="hidden lg:flex items-center gap-1.5 ml-4 pl-4 border-l border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setActiveFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeFilter === 'ALL'
-                      ? 'bg-purple-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  <span>All Requests</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                  }`}>
-                    {allCount}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveFilter('ACTIVE')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeFilter === 'ACTIVE'
-                      ? 'bg-purple-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>In Progress</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    activeFilter === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                  }`}>
-                    {activeCount}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveFilter('RESOLVED')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    activeFilter === 'RESOLVED'
-                      ? 'bg-purple-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Resolved</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                    activeFilter === 'RESOLVED' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                  }`}>
-                    {resolvedCount}
-                  </span>
-                </button>
-              </div>
             </div>
 
             {/* Right Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2.5">
-              {/* Desktop "+ Submit Request" CTA */}
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Submit Request</span>
-              </button>
-
               {/* Theme Toggle (Dark / Light) */}
               <ThemeToggle />
 
