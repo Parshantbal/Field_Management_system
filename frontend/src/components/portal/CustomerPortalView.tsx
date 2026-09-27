@@ -229,17 +229,17 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('ALL')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'ALL'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25 ring-1 ring-purple-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'ALL' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             All Requests
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
             activeFilter === 'ALL'
               ? 'bg-white/25 text-white'
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {allCount}
           </span>
@@ -250,17 +250,17 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('ACTIVE')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'ACTIVE'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25 ring-1 ring-purple-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'ACTIVE' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             In Progress
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
             activeFilter === 'ACTIVE'
               ? 'bg-white/25 text-white'
-              : 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-500/30'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {activeCount}
           </span>
@@ -271,17 +271,17 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('RESOLVED')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'RESOLVED'
-              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25 ring-1 ring-purple-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'RESOLVED' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             Resolved
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
             activeFilter === 'RESOLVED'
               ? 'bg-white/25 text-white'
-              : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-500/30'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {resolvedCount}
           </span>

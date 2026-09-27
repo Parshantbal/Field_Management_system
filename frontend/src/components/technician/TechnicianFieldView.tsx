@@ -259,17 +259,17 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('ACTIVE')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'ACTIVE'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25 ring-1 ring-amber-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'ACTIVE' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             Active Jobs
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
             activeFilter === 'ACTIVE'
               ? 'bg-white/25 text-white'
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {myAssignedOrders.length}
           </span>
@@ -280,11 +280,11 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('OFFERS')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'OFFERS'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25 ring-1 ring-amber-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'OFFERS' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             Job Offers
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
@@ -292,7 +292,7 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
               ? 'bg-white/25 text-white'
               : pendingRequests.length > 0
               ? 'bg-amber-500 text-slate-950 font-bold animate-pulse'
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {pendingRequests.length}
           </span>
@@ -303,17 +303,17 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           onClick={() => onFilterChange && onFilterChange('COMPLETED')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
             activeFilter === 'COMPLETED'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs'
+              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25 ring-1 ring-amber-400/40'
+              : 'bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs'
           }`}
         >
-          <span className={activeFilter === 'COMPLETED' ? 'text-white font-bold' : 'text-slate-900 dark:text-white font-semibold'}>
+          <span className="text-slate-900 dark:!text-white font-bold">
             Completed
           </span>
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
             activeFilter === 'COMPLETED'
               ? 'bg-white/25 text-white'
-              : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-500/30'
+              : 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600'
           }`}>
             {completedOrders.length}
           </span>
@@ -323,11 +323,11 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
           <button
             type="button"
             onClick={onOpenInventory}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-750 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-900 dark:!text-white hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 shadow-xs"
           >
             <Boxes className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-slate-900 dark:text-white font-semibold">Van Parts</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-600">
+            <span className="text-slate-900 dark:!text-white font-bold">Van Parts</span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:!text-white border border-slate-200 dark:border-slate-600">
               {partsCatalog.length}
             </span>
           </button>

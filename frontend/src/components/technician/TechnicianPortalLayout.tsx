@@ -506,15 +506,15 @@ export const TechnicianPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'ACTIVE'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-md shadow-amber-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Clock className={`w-4 h-4 ${activeFilter === 'ACTIVE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <Clock className={`w-4 h-4 ${activeFilter === 'ACTIVE' ? 'text-white' : 'text-amber-500 dark:text-amber-400'}`} />
                   <span>Active Field Jobs</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'ACTIVE' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  activeFilter === 'ACTIVE' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {activeJobsCount}
                 </span>
@@ -530,15 +530,15 @@ export const TechnicianPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'OFFERS'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-md shadow-amber-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <HardHat className={`w-4 h-4 ${activeFilter === 'OFFERS' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <HardHat className={`w-4 h-4 ${activeFilter === 'OFFERS' ? 'text-white' : 'text-amber-500 dark:text-amber-400'}`} />
                   <span>Incoming Job Offers</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'OFFERS' ? 'bg-white/20 text-white border-white/30' : pendingOffersCount > 0 ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  activeFilter === 'OFFERS' ? 'bg-white/20 text-white border-white/30' : pendingOffersCount > 0 ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {pendingOffersCount}
                 </span>
@@ -554,15 +554,15 @@ export const TechnicianPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'COMPLETED'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold shadow-md shadow-amber-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className={`w-4 h-4 ${activeFilter === 'COMPLETED' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <CheckCircle2 className={`w-4 h-4 ${activeFilter === 'COMPLETED' ? 'text-white' : 'text-emerald-500 dark:text-emerald-400'}`} />
                   <span>Completed Sign-offs</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'COMPLETED' ? 'bg-white/20 text-white border-white/30' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                  activeFilter === 'COMPLETED' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {completedJobsCount}
                 </span>

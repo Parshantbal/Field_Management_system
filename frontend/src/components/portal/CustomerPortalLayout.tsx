@@ -409,15 +409,15 @@ export const CustomerPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'ALL'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <ClipboardList className={`w-4 h-4 ${activeFilter === 'ALL' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <ClipboardList className={`w-4 h-4 ${activeFilter === 'ALL' ? 'text-white' : 'text-purple-500 dark:text-purple-400'}`} />
                   <span>All Maintenance Requests</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'ALL' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  activeFilter === 'ALL' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {allCount}
                 </span>
@@ -433,15 +433,15 @@ export const CustomerPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'ACTIVE'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Clock className={`w-4 h-4 ${activeFilter === 'ACTIVE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <Clock className={`w-4 h-4 ${activeFilter === 'ACTIVE' ? 'text-white' : 'text-amber-500 dark:text-amber-400'}`} />
                   <span>Active & In Progress</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'ACTIVE' ? 'bg-white/20 text-white border-white/30' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                  activeFilter === 'ACTIVE' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {activeCount}
                 </span>
@@ -457,15 +457,15 @@ export const CustomerPortalLayout: React.FC = () => {
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
                   activeFilter === 'RESOLVED'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                    : 'text-slate-700 dark:!text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className={`w-4 h-4 ${activeFilter === 'RESOLVED' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <CheckCircle2 className={`w-4 h-4 ${activeFilter === 'RESOLVED' ? 'text-white' : 'text-emerald-500 dark:text-emerald-400'}`} />
                   <span>Resolved & History</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  activeFilter === 'RESOLVED' ? 'bg-white/20 text-white border-white/30' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                  activeFilter === 'RESOLVED' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:!text-white border-slate-200 dark:border-slate-700'
                 }`}>
                   {resolvedCount}
                 </span>
