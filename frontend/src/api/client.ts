@@ -77,6 +77,10 @@ interface WorkOrderOverride {
   status?: WorkOrderStatus;
   scheduledStart?: string;
   scheduledEnd?: string;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+  customerRating?: number;
+  customerFeedback?: string;
 }
 
 const getLocalOverrides = (): Record<number, WorkOrderOverride> => {
@@ -103,10 +107,29 @@ const applyOverridesToOrder = (wo: WorkOrder): WorkOrder => {
   const overrides = getLocalOverrides();
   const ov = overrides[wo.id];
   if (!ov) return wo;
+
+  // Server terminal statuses (COMPLETED, CLOSED, CANCELLED) are absolute truth
+  const isServerTerminal = wo.status === 'COMPLETED' || wo.status === 'CLOSED' || wo.status === 'CANCELLED';
+  const effectiveStatus = isServerTerminal
+    ? wo.status
+    : (ov.status || wo.status);
+
+  // If local override had a stale non-terminal status while server is terminal, heal the override
+  if (isServerTerminal && ov.status && ov.status !== wo.status) {
+    saveLocalOverride(wo.id, {
+      status: wo.status,
+      resolvedAt: wo.resolvedAt || ov.resolvedAt,
+      resolutionNotes: wo.resolutionNotes || ov.resolutionNotes,
+    });
+  }
+
   const isRejected = ov.dispatchStatus === 'REJECTED';
   return {
     ...wo,
     ...ov,
+    status: effectiveStatus,
+    resolutionNotes: wo.resolutionNotes || ov.resolutionNotes,
+    resolvedAt: wo.resolvedAt || ov.resolvedAt,
     technicianId: isRejected ? undefined : (ov.technicianId !== undefined ? ov.technicianId : wo.technicianId),
     technicianName: isRejected ? undefined : (ov.technicianName !== undefined ? ov.technicianName : wo.technicianName),
     technicianPhone: isRejected ? undefined : (ov.technicianPhone !== undefined ? ov.technicianPhone : wo.technicianPhone),
@@ -333,12 +356,25 @@ export const api = {
       return api.workOrders.getById(id);
     },
     resolve: async (id: number, resolutionNotes: string): Promise<WorkOrder> => {
-      const res = await fetch(`${BASE_URL}/work-orders/${id}/resolve`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ resolutionNotes }),
+      const nowIso = new Date().toISOString();
+      saveLocalOverride(id, {
+        status: 'COMPLETED',
+        resolvedAt: nowIso,
+        resolutionNotes,
+        dispatchStatus: 'ACCEPTED',
       });
-      return handleResponse<WorkOrder>(res);
+      try {
+        const res = await fetch(`${BASE_URL}/work-orders/${id}/resolve`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ resolutionNotes }),
+        });
+        const wo = await handleResponse<WorkOrder>(res);
+        return applyOverridesToOrder(wo);
+      } catch (e) {
+        console.warn('Backend resolve warning:', e);
+      }
+      return api.workOrders.getById(id);
     },
     submitFeedback: async (id: number, rating: number, feedback?: string): Promise<WorkOrder> => {
       const res = await fetch(`${BASE_URL}/work-orders/${id}/feedback`, {
@@ -818,12 +854,18 @@ export const api = {
       return tickets.map(applyOverridesToOrder);
     },
     submitFeedback: async (workOrderId: number, rating: number, feedback?: string): Promise<WorkOrder> => {
+      saveLocalOverride(workOrderId, {
+        status: 'CLOSED',
+        customerRating: rating,
+        customerFeedback: feedback,
+      });
       const res = await fetch(`${BASE_URL}/portal/tickets/${workOrderId}/feedback`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ rating, feedback }),
       });
-      return handleResponse<WorkOrder>(res);
+      const wo = await handleResponse<WorkOrder>(res);
+      return applyOverridesToOrder(wo);
     }
   }
 };

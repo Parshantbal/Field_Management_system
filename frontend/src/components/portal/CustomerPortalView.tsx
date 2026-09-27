@@ -178,20 +178,25 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
     }
   };
 
+  const isTicketResolved = (status?: string) => {
+    const s = (status || '').toUpperCase();
+    return s === 'COMPLETED' || s === 'CLOSED' || s === 'RESOLVED';
+  };
+
   const allCount = tickets.length;
   const activeCount = tickets.filter(
-    (t) => t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED'
+    (t) => !isTicketResolved(t.status) && (t.status || '').toUpperCase() !== 'CANCELLED'
   ).length;
   const resolvedCount = tickets.filter(
-    (t) => t.status === 'COMPLETED' || t.status === 'CLOSED'
+    (t) => isTicketResolved(t.status)
   ).length;
 
   const filteredTickets = tickets.filter((t) => {
     if (activeFilter === 'ACTIVE') {
-      return t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED';
+      return !isTicketResolved(t.status) && (t.status || '').toUpperCase() !== 'CANCELLED';
     }
     if (activeFilter === 'RESOLVED') {
-      return t.status === 'COMPLETED' || t.status === 'CLOSED';
+      return isTicketResolved(t.status);
     }
     return true;
   });
@@ -325,8 +330,8 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
         ) : (
           <div className="space-y-4">
             {filteredTickets.map((ticket) => {
-              const isResolved = ticket.status === 'COMPLETED' || ticket.status === 'CLOSED';
-              const needsRating = ticket.status === 'COMPLETED' && !ticket.customerRating;
+              const isResolved = isTicketResolved(ticket.status);
+              const needsRating = isResolved && !ticket.customerRating;
 
               return (
                 <div

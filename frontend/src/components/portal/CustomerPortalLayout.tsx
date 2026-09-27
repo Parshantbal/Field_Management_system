@@ -68,11 +68,25 @@ export const CustomerPortalLayout: React.FC = () => {
     }
   }, [loadNotifications]);
 
+  const handleFilterChange = (filter: 'ALL' | 'ACTIVE' | 'RESOLVED') => {
+    setActiveFilter(filter);
+    loadData();
+  };
+
   useEffect(() => {
     loadData();
-    const timer = setInterval(loadNotifications, 15000);
+    // Poll data every 8s so customer sees live transitions (e.g. technician resolves request)
+    const timer = setInterval(() => {
+      loadData();
+    }, 8000);
     return () => clearInterval(timer);
-  }, [loadData, loadNotifications]);
+  }, [loadData]);
+
+  useEffect(() => {
+    const handleFocus = () => loadData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadData]);
 
   const handleMarkAsRead = async (id: number) => {
     try {
@@ -93,13 +107,18 @@ export const CustomerPortalLayout: React.FC = () => {
     }
   };
 
+  const isTicketResolved = (status?: string) => {
+    const s = (status || '').toUpperCase();
+    return s === 'COMPLETED' || s === 'CLOSED' || s === 'RESOLVED';
+  };
+
   // Ticket counts
   const allCount = tickets.length;
   const activeCount = tickets.filter(
-    (t) => t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED'
+    (t) => !isTicketResolved(t.status) && (t.status || '').toUpperCase() !== 'CANCELLED'
   ).length;
   const resolvedCount = tickets.filter(
-    (t) => t.status === 'COMPLETED' || t.status === 'CLOSED'
+    (t) => isTicketResolved(t.status)
   ).length;
 
   return (
@@ -403,7 +422,7 @@ export const CustomerPortalLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setActiveFilter('ALL');
+                  handleFilterChange('ALL');
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
@@ -427,7 +446,7 @@ export const CustomerPortalLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setActiveFilter('ACTIVE');
+                  handleFilterChange('ACTIVE');
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
@@ -451,7 +470,7 @@ export const CustomerPortalLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setActiveFilter('RESOLVED');
+                  handleFilterChange('RESOLVED');
                   setIsMobileMenuOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
@@ -508,7 +527,7 @@ export const CustomerPortalLayout: React.FC = () => {
           facilities={facilities}
           onSelectWorkOrder={handleSelectWorkOrder}
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
           isCreateModalOpen={isCreateModalOpen}
           setIsCreateModalOpen={setIsCreateModalOpen}
           tickets={tickets}

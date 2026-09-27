@@ -438,6 +438,32 @@ public class WorkOrderService {
                 .build();
         auditLogRepository.save(log);
 
+        // Notify Customer that their request has been resolved
+        if (updated.getCustomer() != null) {
+            try {
+                com.keystone.dto.NotificationDTO.SendNotificationRequest custNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
+                custNotif.setRecipientId(updated.getCustomer().getId());
+                custNotif.setTitle("Service Request Resolved");
+                custNotif.setMessage("Your service request (" + updated.getWorkOrderNumber() + ") \"" + updated.getTitle() + "\" has been resolved by technician. Notes: " + (request.getResolutionNotes() != null ? request.getResolutionNotes() : "Work completed"));
+                custNotif.setType("STATUS_UPDATE");
+                custNotif.setReferenceId(updated.getId());
+                notificationService.sendNotification(custNotif);
+            } catch (Exception ignored) {}
+        }
+
+        // Notify Admin that technician resolved work order
+        if (updated.getAdminId() != null) {
+            try {
+                com.keystone.dto.NotificationDTO.SendNotificationRequest adminNotif = new com.keystone.dto.NotificationDTO.SendNotificationRequest();
+                adminNotif.setRecipientId(updated.getAdminId());
+                adminNotif.setTitle("Work Order Resolved");
+                adminNotif.setMessage("Technician resolved Work Order (" + updated.getWorkOrderNumber() + ") \"" + updated.getTitle() + "\".");
+                adminNotif.setType("STATUS_UPDATE");
+                adminNotif.setReferenceId(updated.getId());
+                notificationService.sendNotification(adminNotif);
+            } catch (Exception ignored) {}
+        }
+
         return mapToDTO(updated);
     }
 
@@ -582,8 +608,16 @@ public class WorkOrderService {
             }
             return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         } else if (user.getRole() == Role.ROLE_CUSTOMER) {
-            return workOrderRepository.findByCustomerId(user.getId())
-                    .stream().map(this::mapToDTO).collect(Collectors.toList());
+            List<WorkOrder> orders = workOrderRepository.findByCustomerId(user.getId());
+            if (orders == null || orders.isEmpty()) {
+                orders = workOrderRepository.findAll().stream()
+                        .filter(w -> w.getCustomer() != null &&
+                                (w.getCustomer().getId().equals(user.getId()) ||
+                                 (w.getCustomer().getEmail() != null && w.getCustomer().getEmail().equalsIgnoreCase(user.getEmail())) ||
+                                 (w.getCustomer().getFullName() != null && w.getCustomer().getFullName().equalsIgnoreCase(user.getFullName()))))
+                        .collect(Collectors.toList());
+            }
+            return orders.stream().map(this::mapToDTO).collect(Collectors.toList());
         }
         Long adminId = user.getAdminId() != null ? user.getAdminId() : user.getId();
         return getAllWorkOrders(null, null, null, adminId);
