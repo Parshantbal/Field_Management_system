@@ -19,19 +19,39 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-interface CustomerPortalViewProps {
+export interface CustomerPortalViewProps {
   facilities: Facility[];
   onSelectWorkOrder: (id: number) => void;
+  activeFilter?: 'ALL' | 'ACTIVE' | 'RESOLVED';
+  onFilterChange?: (filter: 'ALL' | 'ACTIVE' | 'RESOLVED') => void;
+  isCreateModalOpen?: boolean;
+  setIsCreateModalOpen?: (open: boolean) => void;
+  tickets?: WorkOrder[];
+  onRefreshTickets?: () => void;
+  isLoadingTickets?: boolean;
 }
 
 export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
   facilities,
   onSelectWorkOrder,
+  activeFilter = 'ALL',
+  onFilterChange,
+  isCreateModalOpen,
+  setIsCreateModalOpen,
+  tickets: parentTickets,
+  onRefreshTickets,
+  isLoadingTickets,
 }) => {
   const { user } = useAuth();
-  const [myTickets, setMyTickets] = useState<WorkOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [internalTickets, setInternalTickets] = useState<WorkOrder[]>([]);
+  const [internalLoading, setInternalLoading] = useState(true);
+  const [internalCreateOpen, setInternalCreateOpen] = useState(false);
+
+  const showModal = isCreateModalOpen !== undefined ? isCreateModalOpen : internalCreateOpen;
+  const setShowModal = setIsCreateModalOpen || setInternalCreateOpen;
+
+  const tickets = parentTickets !== undefined ? parentTickets : internalTickets;
+  const isLoading = isLoadingTickets !== undefined ? isLoadingTickets : internalLoading;
 
   // New Request Form
   const [title, setTitle] = useState('');
@@ -51,14 +71,18 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
   const [feedbackComments, setFeedbackComments] = useState<string>('');
 
   const fetchTickets = async () => {
-    setIsLoading(true);
+    if (parentTickets !== undefined && onRefreshTickets) {
+      onRefreshTickets();
+      return;
+    }
+    setInternalLoading(true);
     try {
-      const tickets = await api.portal.getMyTickets();
-      setMyTickets(tickets);
+      const tix = await api.portal.getMyTickets();
+      setInternalTickets(tix);
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoading(false);
+      setInternalLoading(false);
     }
   };
 
@@ -77,7 +101,9 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
   };
 
   useEffect(() => {
-    fetchTickets();
+    if (parentTickets === undefined) {
+      fetchTickets();
+    }
     fetchAdmins();
   }, []);
 
@@ -120,10 +146,14 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
         assetId: assetId || undefined,
         adminId: selectedAdminId,
       });
-      setShowNewRequestModal(false);
+      setShowModal(false);
       setTitle('');
       setDescription('');
-      await fetchTickets();
+      if (onRefreshTickets) {
+        onRefreshTickets();
+      } else {
+        await fetchTickets();
+      }
     } catch (err: any) {
       alert(`Request submission failed: ${err.message}`);
     } finally {
@@ -138,17 +168,39 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
       await api.portal.submitFeedback(feedbackTicket.id, rating, feedbackComments);
       setFeedbackTicket(null);
       setFeedbackComments('');
-      await fetchTickets();
+      if (onRefreshTickets) {
+        onRefreshTickets();
+      } else {
+        await fetchTickets();
+      }
     } catch (err: any) {
       alert(`Feedback submission failed: ${err.message}`);
     }
   };
 
+  const allCount = tickets.length;
+  const activeCount = tickets.filter(
+    (t) => t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED'
+  ).length;
+  const resolvedCount = tickets.filter(
+    (t) => t.status === 'COMPLETED' || t.status === 'CLOSED'
+  ).length;
+
+  const filteredTickets = tickets.filter((t) => {
+    if (activeFilter === 'ACTIVE') {
+      return t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED';
+    }
+    if (activeFilter === 'RESOLVED') {
+      return t.status === 'COMPLETED' || t.status === 'CLOSED';
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       
       {/* Welcome Banner */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20 shadow-xs">
@@ -162,18 +214,78 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
         </div>
 
         <button
-          onClick={() => setShowNewRequestModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/25 transition-all shrink-0 cursor-pointer"
+          onClick={() => setShowModal(true)}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-purple-600/25 transition-all shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Submit Service Request
         </button>
       </div>
 
+      {/* On-Page Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('ALL')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'ALL'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>All Requests</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          }`}>
+            {allCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('ACTIVE')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'ACTIVE'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>In Progress</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
+          }`}>
+            {activeCount}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('RESOLVED')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'RESOLVED'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Resolved</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'RESOLVED' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+          }`}>
+            {resolvedCount}
+          </span>
+        </button>
+      </div>
+
       {/* Active Service Requests */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">My Maintenance Requests ({myTickets.length})</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            {activeFilter === 'ACTIVE'
+              ? `In-Progress Maintenance (${filteredTickets.length})`
+              : activeFilter === 'RESOLVED'
+              ? `Resolved History (${filteredTickets.length})`
+              : `My Maintenance Requests (${filteredTickets.length})`}
+          </h2>
           <button
             onClick={fetchTickets}
             className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-bold transition-colors cursor-pointer"
@@ -184,17 +296,23 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
 
         {isLoading ? (
           <div className="p-12 text-center text-slate-500 text-xs font-medium">Loading your service tickets...</div>
-        ) : myTickets.length === 0 ? (
+        ) : filteredTickets.length === 0 ? (
           <div className="p-12 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-slate-500 shadow-sm">
             <Building2 className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
-            <p className="font-bold text-slate-900 dark:text-white">No active requests logged.</p>
+            <p className="font-bold text-slate-900 dark:text-white">
+              {activeFilter === 'ACTIVE'
+                ? 'No active in-progress tickets right now.'
+                : activeFilter === 'RESOLVED'
+                ? 'No resolved tickets in history yet.'
+                : 'No active requests logged.'}
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Need repairs, temperature adjustment, or equipment inspection? Click "Submit Service Request" above.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {myTickets.map((ticket) => {
+            {filteredTickets.map((ticket) => {
               const isResolved = ticket.status === 'COMPLETED' || ticket.status === 'CLOSED';
               const needsRating = ticket.status === 'COMPLETED' && !ticket.customerRating;
 
@@ -319,16 +437,16 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
       </div>
 
       {/* New Request Modal */}
-      {showNewRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 Submit New Facility Service Request
               </h3>
               <button
-                onClick={() => setShowNewRequestModal(false)}
+                onClick={() => setShowModal(false)}
                 className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -441,7 +559,7 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
               <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowNewRequestModal(false)}
+                  onClick={() => setShowModal(false)}
                   className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
@@ -461,8 +579,8 @@ export const CustomerPortalView: React.FC<CustomerPortalViewProps> = ({
 
       {/* Customer Feedback Modal */}
       {feedbackTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
               Rate Completed Maintenance Service

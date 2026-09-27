@@ -22,11 +22,14 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
-interface TechnicianFieldViewProps {
+export interface TechnicianFieldViewProps {
   workOrders: WorkOrder[];
   partsCatalog: Part[];
   onRefresh: () => void;
   onSelectWorkOrder: (id: number) => void;
+  activeFilter?: 'ALL' | 'OFFERS' | 'ACTIVE' | 'COMPLETED';
+  onFilterChange?: (filter: 'ALL' | 'OFFERS' | 'ACTIVE' | 'COMPLETED') => void;
+  onOpenInventory?: () => void;
 }
 
 export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
@@ -34,6 +37,9 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
   partsCatalog,
   onRefresh,
   onSelectWorkOrder,
+  activeFilter = 'ALL',
+  onFilterChange,
+  onOpenInventory,
 }) => {
   const { user } = useAuth();
   const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(null);
@@ -104,6 +110,11 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
         wo.status === 'EN_ROUTE' ||
         wo.status === 'ON_SITE' ||
         wo.status === 'ON_HOLD')
+  );
+
+  // 3. Completed sign-offs
+  const completedOrders = effectiveOrders.filter(
+    (wo) => wo.status === 'COMPLETED' || wo.status === 'CLOSED'
   );
 
   const handleAcceptJob = async (woId: number) => {
@@ -241,147 +252,111 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
         </div>
       </div>
 
+      {/* On-Page Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('ACTIVE')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'ACTIVE'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Active Jobs</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          }`}>
+            {myAssignedOrders.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('OFFERS')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'OFFERS'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Job Offers</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'OFFERS' ? 'bg-white/20 text-white' : pendingRequests.length > 0 ? 'bg-amber-500 text-slate-950 font-bold animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+          }`}>
+            {pendingRequests.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onFilterChange && onFilterChange('COMPLETED')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeFilter === 'COMPLETED'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <span>Completed</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+            activeFilter === 'COMPLETED' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+          }`}>
+            {completedOrders.length}
+          </span>
+        </button>
+
+        {onOpenInventory && (
+          <button
+            type="button"
+            onClick={onOpenInventory}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+          >
+            <Boxes className="w-3.5 h-3.5 text-amber-500" />
+            <span>Van Parts ({partsCatalog.length})</span>
+          </button>
+        )}
+      </div>
+
       {/* 🔔 Incoming Job Offers / Assignment Requests */}
-      {pendingRequests.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+      {(activeFilter === 'ALL' || activeFilter === 'OFFERS') && (
+        pendingRequests.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+                <span>Incoming Assignment Requests ({pendingRequests.length})</span>
+              </h2>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-500/30">
+                Awaiting Your Decision
               </span>
-              <span>Incoming Assignment Requests ({pendingRequests.length})</span>
-            </h2>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-500/30">
-              Awaiting Your Decision
-            </span>
-          </div>
+            </div>
 
-          <div className="space-y-4">
-            {pendingRequests.map((wo) => (
-              <div
-                key={wo.id}
-                className="p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-500/10 border-2 border-amber-400/80 dark:border-amber-500/50 space-y-4 shadow-lg shadow-amber-500/5 transition-all"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-amber-900 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-500/20 px-2.5 py-0.5 rounded border border-amber-300 dark:border-amber-500/30">
-                      {wo.workOrderNumber}
-                    </span>
-                    <PriorityBadge priority={wo.priority} />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-mono">
-                      NEW JOB OFFER
-                    </span>
-                  </div>
-                  <SlaCountdown dueTime={wo.resolutionSlaDue} riskLevel={wo.slaRiskLevel} />
-                </div>
-
-                <div>
-                  <h3
-                    onClick={() => onSelectWorkOrder(wo.id)}
-                    className="text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
-                  >
-                    {wo.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
-                      <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                      {wo.facilityName}
-                    </span>
-                    <span>•</span>
-                    <span>{wo.facilityAddress}</span>
-                    {wo.assetName && (
-                      <>
-                        <span>•</span>
-                        <span className="text-amber-700 dark:text-amber-300 font-mono font-medium">Asset: {wo.assetName}</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                <p className="text-xs text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-900 p-3.5 rounded-xl border border-amber-200 dark:border-slate-800 leading-relaxed">
-                  {wo.description}
-                </p>
-
-                {/* Accept / Decline Action Bar */}
-                <div className="pt-3 border-t border-amber-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-[11px] text-slate-600 dark:text-slate-400">
-                    Accepting will confirm your dispatch and display your details to the customer.
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRejectingWo(wo)}
-                      className="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                    >
-                      <X className="w-4 h-4" />
-                      Decline / Busy
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isAcceptingId === wo.id}
-                      onClick={() => handleAcceptJob(wo.id)}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-600/30 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      {isAcceptingId === wo.id ? 'Accepting...' : 'Accept Assignment'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Active Work Orders */}
-      <div className="space-y-4">
-        <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-between">
-          <span>My Active Field Jobs ({myAssignedOrders.length})</span>
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">Sorted by urgency</span>
-        </h2>
-
-        {myAssignedOrders.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-slate-500 shadow-sm">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
-            No active work orders currently assigned to you.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {myAssignedOrders.map((wo) => {
-              const isOnSite = wo.status === 'ON_SITE';
-              const isEnRoute = wo.status === 'EN_ROUTE';
-              const isAssigned = wo.status === 'ASSIGNED';
-
-              return (
+            <div className="space-y-4">
+              {pendingRequests.map((wo) => (
                 <div
                   key={wo.id}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-750 transition-all space-y-4 shadow-sm"
+                  className="p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-500/10 border-2 border-amber-400/80 dark:border-amber-500/50 space-y-4 shadow-lg shadow-amber-500/5 transition-all"
                 >
-                  {/* Top Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-300 dark:border-amber-500/20">
+                      <span className="font-mono text-xs font-bold text-amber-900 dark:text-amber-300 bg-amber-200/80 dark:bg-amber-500/20 px-2.5 py-0.5 rounded border border-amber-300 dark:border-amber-500/30">
                         {wo.workOrderNumber}
                       </span>
                       <PriorityBadge priority={wo.priority} />
-                      <StatusBadge status={wo.status} />
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-mono">
+                        NEW JOB OFFER
+                      </span>
                     </div>
-
-                    <SlaCountdown
-                      dueTime={wo.resolutionSlaDue}
-                      resolvedAt={wo.resolvedAt}
-                      riskLevel={wo.slaRiskLevel}
-                    />
+                    <SlaCountdown dueTime={wo.resolutionSlaDue} riskLevel={wo.slaRiskLevel} />
                   </div>
 
-                  {/* Title & Facility */}
                   <div>
                     <h3
                       onClick={() => onSelectWorkOrder(wo.id)}
-                      className="text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                      className="text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
                     >
                       {wo.title}
                     </h3>
@@ -401,92 +376,288 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
                     </p>
                   </div>
 
-                  {/* Scope of Work */}
-                  <p className="text-xs text-slate-700 dark:text-slate-400 bg-slate-50 dark:bg-slate-850/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 leading-relaxed">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-900 p-3.5 rounded-xl border border-amber-200 dark:border-slate-800 leading-relaxed">
                     {wo.description}
                   </p>
 
-                  {/* Parts and Labor Counters */}
-                  <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                    <span>Parts: <strong className="text-slate-900 dark:text-white">{wo.partsUsed?.length || 0}</strong> logged</span>
-                    <span>•</span>
-                    <span>Total Cost: <strong className="text-amber-700 dark:text-brand-400 font-mono font-bold">${(wo.totalCost || 0).toFixed(2)}</strong></span>
+                  {/* Accept / Decline Action Bar */}
+                  <div className="pt-3 border-t border-amber-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400">
+                      Accepting will confirm your dispatch and display your details to the customer.
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRejectingWo(wo)}
+                        className="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <X className="w-4 h-4" />
+                        Decline / Busy
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isAcceptingId === wo.id}
+                        onClick={() => handleAcceptJob(wo.id)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-emerald-600/30 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        {isAcceptingId === wo.id ? 'Accepting...' : 'Accept Assignment'}
+                      </button>
+                    </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeFilter === 'OFFERS' ? (
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-slate-500 shadow-sm">
+            <CheckCircle2 className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-80" />
+            <p className="font-bold text-slate-900 dark:text-white">No pending assignment requests.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">When an admin dispatches a new ticket to you, it will appear here for your decision.</p>
+          </div>
+        ) : null
+      )}
 
-                  {/* Field Actions Toolbar */}
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      
-                      {/* En Route button */}
-                      {isAssigned && (
-                        <button
-                          onClick={() => {
-                            handleStatusTransition(wo.id, 'EN_ROUTE');
-                            handleStartTimer(wo.id, 'TRAVEL');
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md"
-                        >
-                          <Navigation className="w-3.5 h-3.5" />
-                          Start Travel (En Route)
-                        </button>
-                      )}
+      {/* Active Work Orders */}
+      {(activeFilter === 'ALL' || activeFilter === 'ACTIVE') && (
+        <div className="space-y-4">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-between">
+            <span>My Active Field Jobs ({myAssignedOrders.length})</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">Sorted by urgency</span>
+          </h2>
 
-                      {/* Arrived On Site button */}
-                      {isEnRoute && (
-                        <button
-                          onClick={() => {
-                            handleStatusTransition(wo.id, 'ON_SITE');
-                            if (activeTimer) handleStopTimer();
-                            handleStartTimer(wo.id, 'ON_SITE');
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md"
-                        >
-                          <Play className="w-3.5 h-3.5" />
-                          Arrived On Site (Clock In)
-                        </button>
-                      )}
+          {myAssignedOrders.length === 0 ? (
+            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-slate-500 shadow-sm">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+              <p className="font-bold text-slate-900 dark:text-white">No active work orders currently assigned to you.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Check the "Job Offers" tab above for incoming dispatches.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {myAssignedOrders.map((wo) => {
+                const isOnSite = wo.status === 'ON_SITE';
+                const isEnRoute = wo.status === 'EN_ROUTE';
+                const isAssigned = wo.status === 'ASSIGNED';
 
-                      {/* Log Parts Consumption */}
-                      {isOnSite && (
-                        <button
-                          onClick={() => setSelectedWoForPart(wo)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all"
-                        >
-                          <Boxes className="w-3.5 h-3.5 text-brand-400" />
-                          Log Parts Used
-                        </button>
-                      )}
+                return (
+                  <div
+                    key={wo.id}
+                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-750 transition-all space-y-4 shadow-sm"
+                  >
+                    {/* Top Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-amber-800 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-300 dark:border-amber-500/20">
+                          {wo.workOrderNumber}
+                        </span>
+                        <PriorityBadge priority={wo.priority} />
+                        <StatusBadge status={wo.status} />
+                      </div>
 
-                      {/* Resolve Work Order */}
-                      {isOnSite && (
-                        <button
-                          onClick={() => setResolvingWo(wo)}
-                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Complete & Sign-off
-                        </button>
-                      )}
+                      <SlaCountdown
+                        dueTime={wo.resolutionSlaDue}
+                        resolvedAt={wo.resolvedAt}
+                        riskLevel={wo.slaRiskLevel}
+                      />
                     </div>
 
-                    <button
+                    {/* Title & Facility */}
+                    <div>
+                      <h3
+                        onClick={() => onSelectWorkOrder(wo.id)}
+                        className="text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors"
+                      >
+                        {wo.title}
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 flex items-center gap-2 flex-wrap">
+                        <span className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                          <Building2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          {wo.facilityName}
+                        </span>
+                        <span>•</span>
+                        <span>{wo.facilityAddress}</span>
+                        {wo.assetName && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-700 dark:text-amber-300 font-mono font-medium">Asset: {wo.assetName}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Scope of Work */}
+                    <p className="text-xs text-slate-700 dark:text-slate-400 bg-slate-50 dark:bg-slate-850/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 leading-relaxed">
+                      {wo.description}
+                    </p>
+
+                    {/* Parts and Labor Counters */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                      <span>Parts: <strong className="text-slate-900 dark:text-white">{wo.partsUsed?.length || 0}</strong> logged</span>
+                      <span>•</span>
+                      <span>Total Cost: <strong className="text-amber-700 dark:text-brand-400 font-mono font-bold">${(wo.totalCost || 0).toFixed(2)}</strong></span>
+                    </div>
+
+                    {/* Field Actions Toolbar */}
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        
+                        {/* En Route button */}
+                        {isAssigned && (
+                          <button
+                            onClick={() => {
+                              handleStatusTransition(wo.id, 'EN_ROUTE');
+                              handleStartTimer(wo.id, 'TRAVEL');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md"
+                          >
+                            <Navigation className="w-3.5 h-3.5" />
+                            Start Travel (En Route)
+                          </button>
+                        )}
+
+                        {/* Arrived On Site button */}
+                        {isEnRoute && (
+                          <button
+                            onClick={() => {
+                              handleStatusTransition(wo.id, 'ON_SITE');
+                              if (activeTimer) handleStopTimer();
+                              handleStartTimer(wo.id, 'ON_SITE');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md"
+                          >
+                            <Play className="w-3.5 h-3.5" />
+                            Arrived On Site (Clock In)
+                          </button>
+                        )}
+
+                        {/* Log Parts Consumption */}
+                        {isOnSite && (
+                          <button
+                            onClick={() => setSelectedWoForPart(wo)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-all cursor-pointer"
+                          >
+                            <Boxes className="w-3.5 h-3.5 text-brand-400" />
+                            Log Parts Used
+                          </button>
+                        )}
+
+                        {/* Resolve Work Order */}
+                        {isOnSite && (
+                          <button
+                            onClick={() => setResolvingWo(wo)}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Complete & Sign-off
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => onSelectWorkOrder(wo.id)}
+                        className="text-xs text-slate-400 hover:text-white font-medium cursor-pointer"
+                      >
+                        View Details →
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Completed Sign-offs Section */}
+      {(activeFilter === 'ALL' || activeFilter === 'COMPLETED') && (
+        completedOrders.length > 0 ? (
+          <div className="space-y-4 pt-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                Completed Field Sign-Offs ({completedOrders.length})
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">Past resolved tickets</span>
+            </h2>
+
+            <div className="space-y-3">
+              {completedOrders.map((wo) => (
+                <div
+                  key={wo.id}
+                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20">
+                        {wo.workOrderNumber}
+                      </span>
+                      <PriorityBadge priority={wo.priority} />
+                      <StatusBadge status={wo.status} />
+                    </div>
+                    {wo.resolvedAt && (
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Signed off {new Date(wo.resolvedAt).toLocaleDateString()} at {new Date(wo.resolvedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3
                       onClick={() => onSelectWorkOrder(wo.id)}
-                      className="text-xs text-slate-400 hover:text-white font-medium"
+                      className="text-sm sm:text-base font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                    >
+                      {wo.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                      <span>{wo.facilityName}</span>
+                      {wo.assetName && (
+                        <>
+                          <span>•</span>
+                          <span>Asset: {wo.assetName}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  {wo.resolutionNotes && (
+                    <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-slate-700 dark:text-slate-300">
+                      <strong className="text-emerald-700 dark:text-emerald-400 block mb-0.5">Technician Resolution Notes:</strong>
+                      {wo.resolutionNotes}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-3">
+                      <span>Parts: <strong>{wo.partsUsed?.length || 0}</strong></span>
+                      <span>Total: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">${(wo.totalCost || 0).toFixed(2)}</strong></span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onSelectWorkOrder(wo.id)}
+                      className="text-amber-600 hover:text-amber-700 dark:text-amber-400 font-semibold cursor-pointer"
                     >
                       View Details →
                     </button>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        ) : activeFilter === 'COMPLETED' ? (
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center text-slate-500 shadow-sm">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+            <p className="font-bold text-slate-900 dark:text-white">No completed sign-offs yet.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Once you complete jobs on site, they will be archived here.</p>
+          </div>
+        ) : null
+      )}
 
       {/* Part Consumption Modal */}
       {selectedWoForPart && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Boxes className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               Deduct Warehouse Part
@@ -547,8 +718,8 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
 
       {/* Resolution Modal */}
       {resolvingWo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               Complete Work Order & Close Ticket
@@ -600,8 +771,8 @@ export const TechnicianFieldView: React.FC<TechnicianFieldViewProps> = ({
 
       {/* Decline / Busy Reason Modal */}
       {rejectingWo && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto animate-in fade-in">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
                 <AlertCircle className="w-5 h-5" />

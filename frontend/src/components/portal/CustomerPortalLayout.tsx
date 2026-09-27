@@ -1,42 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth, DEMO_USERS } from '../../context/AuthContext';
 import { CustomerPortalView } from './CustomerPortalView';
 import { Facility, NotificationItem, WorkOrder } from '../../types';
 import { api } from '../../api/client';
 import {
-  Wrench,
   Building2,
   LogOut,
   Bell,
   Check,
   X,
-  Clock,
+  Menu,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  ClipboardList,
   CheckCircle2,
-  AlertCircle
+  Clock,
+  ShieldCheck,
+  ChevronDown
 } from 'lucide-react';
-import { WorkOrderDetailModal } from '../workorders/WorkOrderDetailModal';
 import { ThemeToggle } from '../common/ThemeToggle';
 
 export const CustomerPortalLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, quickSwitch } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [tickets, setTickets] = useState<WorkOrder[]>([]);
+  const [isTicketsLoading, setIsTicketsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
 
-  const loadData = async () => {
-    try {
-      const facs = await api.facilities.getAll().catch(() => []);
-      setFacilities(facs);
-      loadNotifications();
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  // Responsive Navigation & Filter States
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'RESOLVED'>('ALL');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState<boolean>(false);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       const list = await api.notifications.getAll().catch(() => []);
       setNotifications(list);
@@ -45,13 +48,31 @@ export const CustomerPortalLayout: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
+
+  const loadData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const [facs, tix] = await Promise.all([
+        api.facilities.getAll().catch(() => []),
+        api.portal.getMyTickets().catch(() => []),
+      ]);
+      setFacilities(facs);
+      setTickets(tix);
+      await loadNotifications();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRefreshing(false);
+      setIsTicketsLoading(false);
+    }
+  }, [loadNotifications]);
 
   useEffect(() => {
     loadData();
     const timer = setInterval(loadNotifications, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [loadData, loadNotifications]);
 
   const handleMarkAsRead = async (id: number) => {
     try {
@@ -72,14 +93,38 @@ export const CustomerPortalLayout: React.FC = () => {
     }
   };
 
+  // Ticket counts
+  const allCount = tickets.length;
+  const activeCount = tickets.filter(
+    (t) => t.status !== 'COMPLETED' && t.status !== 'CLOSED' && t.status !== 'CANCELLED'
+  ).length;
+  const resolvedCount = tickets.filter(
+    (t) => t.status === 'COMPLETED' || t.status === 'CLOSED'
+  ).length;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* Customer Isolated Top Header */}
       <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            
+            {/* Left: Mobile Hamburger Button & Brand Logo */}
+            <div className="flex items-center gap-2.5 sm:gap-3.5">
+              {/* Mobile Hamburger Drawer Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                aria-label="Toggle navigation drawer"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
+
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-md shadow-purple-500/20 border border-purple-400/40 shrink-0">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
@@ -92,19 +137,97 @@ export const CustomerPortalLayout: React.FC = () => {
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Facilities Maintenance & Tenant Requests</p>
               </div>
+
+              {/* Desktop Quick Filter Navigation Pills */}
+              <div className="hidden lg:flex items-center gap-1.5 ml-4 pl-4 border-l border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeFilter === 'ALL'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>All Requests</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {allCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('ACTIVE')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeFilter === 'ACTIVE'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>In Progress</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    activeFilter === 'ACTIVE' ? 'bg-white/20 text-white' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                  }`}>
+                    {activeCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('RESOLVED')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeFilter === 'RESOLVED'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Resolved</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    activeFilter === 'RESOLVED' ? 'bg-white/20 text-white' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                  }`}>
+                    {resolvedCount}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* Right User Bar - Strictly Customer info and Logout, NO ADMIN ID */}
-            <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Right Controls */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
+              {/* Desktop "+ Submit Request" CTA */}
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Submit Request</span>
+              </button>
+
               {/* Theme Toggle (Dark / Light) */}
               <ThemeToggle />
+
+              {/* Refresh button (Desktop only, mobile has it in drawer) */}
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={isRefreshing}
+                className="hidden md:flex p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                title="Refresh requests"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-purple-600 dark:text-purple-400' : ''}`} />
+              </button>
 
               {/* Notifications dropdown toggle */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 relative transition-all"
+                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 relative transition-all cursor-pointer"
                   title="Notifications"
                 >
                   <Bell className="w-4 h-4" />
@@ -115,7 +238,7 @@ export const CustomerPortalLayout: React.FC = () => {
                   )}
                 </button>
 
-                {/* Notifications Drawer */}
+                {/* Notifications Dropdown Panel */}
                 {showNotifications && (
                   <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-4 z-50 animate-in fade-in">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
@@ -168,52 +291,311 @@ export const CustomerPortalLayout: React.FC = () => {
                 )}
               </div>
 
-              {/* Tenant Details */}
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+              {/* Demo Persona Switcher (Desktop only, if demo account) */}
+              {user?.email && DEMO_USERS.some(u => u.email === user.email) && (
+                <div className="relative hidden md:block">
+                  <button
+                    onClick={() => setIsPersonaMenuOpen(!isPersonaMenuOpen)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[90px]">{user?.fullName || 'Customer'}</span>
+                    <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                  </button>
+
+                  {isPersonaMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-72 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-2 z-50">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1">
+                        Switch Demo Persona
+                      </div>
+                      {DEMO_USERS.map((demo) => (
+                        <button
+                          key={demo.email}
+                          onClick={async () => {
+                            setIsPersonaMenuOpen(false);
+                            await quickSwitch(demo.email);
+                          }}
+                          className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left text-xs transition-colors cursor-pointer"
+                        >
+                          <span className="text-slate-800 dark:text-slate-200 font-semibold">{demo.label}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{demo.role.replace('ROLE_', '')}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tenant Details (Desktop only) */}
+              <div className="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
                 <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20 border border-purple-200 dark:border-purple-500/40 flex items-center justify-center font-bold text-xs text-purple-700 dark:text-purple-300">
                   {user?.firstName?.[0] || 'C'}
                 </div>
-                <div className="hidden sm:block text-left">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">{user?.fullName || 'Customer'}</div>
-                  <div className="text-[10px] font-medium text-purple-600 dark:text-purple-400">{user?.email}</div>
+                <div className="text-left">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">{user?.fullName || 'Customer'}</div>
+                  <div className="text-[10px] font-medium text-purple-600 dark:text-purple-400 truncate max-w-[120px]">{user?.email}</div>
                 </div>
               </div>
 
-              {/* Logout button */}
+              {/* Logout button (Desktop only, mobile has it in drawer) */}
               <button
                 type="button"
                 onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Logout</span>
+                <span>Logout</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Mobile Navigation Drawer Overlay (Just like Admin Portal!) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Container */}
+          <div className="relative w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center text-white shadow-xs">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-sm text-slate-900 dark:text-white">KEYSTONE</span>
+                  <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-semibold uppercase tracking-wider">
+                    Customer Portal
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Customer Profile Section inside Drawer */}
+            <div className="p-3 mx-3 mt-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-md shadow-purple-500/20 shrink-0">
+                  {user?.firstName?.[0] || 'C'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {user?.fullName || 'Customer Tenant'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    {user?.email}
+                  </div>
+                </div>
+              </div>
+
+              {/* Connected Admin ID Badge if present */}
+              {user?.adminId && (
+                <div className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-[11px] font-mono">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                    <span>Connected Ops Admin:</span>
+                  </div>
+                  <span className="font-bold">#{user.adminId}</span>
+                </div>
+              )}
+
+              {/* Demo Persona Switcher inside Drawer */}
+              {user?.email && DEMO_USERS.some(u => u.email === user.email) && (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                  <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>Quick Switch Persona</span>
+                  </div>
+                  <div className="space-y-1">
+                    {DEMO_USERS.map((demo) => {
+                      const isCurrent = user?.email === demo.email;
+                      return (
+                        <button
+                          key={demo.email}
+                          onClick={async () => {
+                            setIsMobileMenuOpen(false);
+                            await quickSwitch(demo.email);
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                            isCurrent
+                              ? 'bg-purple-600/15 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/30'
+                              : 'hover:bg-slate-200 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span className="truncate">{demo.label}</span>
+                          <span className="text-[9px] text-slate-400 font-mono ml-2 shrink-0">{demo.role.replace('ROLE_', '')}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Primary Action Button inside Drawer */}
+            <div className="px-3 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsCreateModalOpen(true);
+                }}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Submit Service Request</span>
+              </button>
+            </div>
+
+            {/* Nav Filter Items inside Drawer */}
+            <div className="p-3 space-y-1 overflow-y-auto flex-1">
+              <div className="px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                My Request Views
+              </div>
+
+              {/* All Requests */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveFilter('ALL');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                  activeFilter === 'ALL'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <ClipboardList className={`w-4 h-4 ${activeFilter === 'ALL' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <span>All Maintenance Requests</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  activeFilter === 'ALL' ? 'bg-white/20 text-white border-white/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                }`}>
+                  {allCount}
+                </span>
+              </button>
+
+              {/* In Progress */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveFilter('ACTIVE');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                  activeFilter === 'ACTIVE'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className={`w-4 h-4 ${activeFilter === 'ACTIVE' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <span>Active & In Progress</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  activeFilter === 'ACTIVE' ? 'bg-white/20 text-white border-white/30' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                }`}>
+                  {activeCount}
+                </span>
+              </button>
+
+              {/* Resolved */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveFilter('RESOLVED');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all cursor-pointer ${
+                  activeFilter === 'RESOLVED'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-600/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className={`w-4 h-4 ${activeFilter === 'RESOLVED' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <span>Resolved & History</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  activeFilter === 'RESOLVED' ? 'bg-white/20 text-white border-white/30' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                }`}>
+                  {resolvedCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Drawer Footer Actions */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  loadData();
+                }}
+                disabled={isRefreshing}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-purple-600 dark:text-purple-400' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing Tickets...' : 'Refresh Tickets'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
         <CustomerPortalView
           facilities={facilities}
           onSelectWorkOrder={handleSelectWorkOrder}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          isCreateModalOpen={isCreateModalOpen}
+          setIsCreateModalOpen={setIsCreateModalOpen}
+          tickets={tickets}
+          onRefreshTickets={loadData}
+          isLoadingTickets={isTicketsLoading}
         />
       </main>
 
       {/* Ticket Details Inspection Modal if Customer Clicks Ticket */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 w-full max-w-2xl rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
                 <span className="text-xs font-mono text-purple-600 dark:text-purple-400 font-bold">{selectedTicket.workOrderNumber}</span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedTicket.title}</h3>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{selectedTicket.title}</h3>
               </div>
               <button
                 onClick={() => { setSelectedTicket(null); setSelectedTicketId(null); }}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -257,7 +639,7 @@ export const CustomerPortalLayout: React.FC = () => {
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => { setSelectedTicket(null); setSelectedTicketId(null); }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl transition-colors"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Close
               </button>
